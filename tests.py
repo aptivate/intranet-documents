@@ -6,103 +6,18 @@ Replace this with more appropriate tests for your application.
 """
 
 from StringIO import StringIO
-from lxml import etree
 
 from django.conf import settings as django_settings
 from django.contrib import admin 
 from django.contrib.auth import login
 from django.core.files.base import ContentFile
 from django.core.urlresolvers import reverse
-from django.test.client import Client, RequestFactory, encode_multipart, \
-    MULTIPART_CONTENT, BOUNDARY
 from django.utils.functional import curry
 
-from binder.test_utils import AptivateEnhancedTestCase
+from binder.test_utils import AptivateEnhancedTestCase, SuperClient
 from binder.models import IntranetUser, Program
 from documents.admin import DocumentAdmin
 from documents.models import Document, DocumentType
-
-class SuperClient(Client):
-    def get(self, *args, **extra):
-        response = Client.get(self, *args)
-        return self.capture_results('get', response, *args, **extra)
-
-    def post(self, path, data={}, content_type=MULTIPART_CONTENT,
-             **extra):
-        """
-        Pickle the request first, in case it contains a StringIO (file upload)
-        that can't be read twice.
-        
-        If the data doesn't have an items() method, then it's probably already
-        been converted to a string (encoded), and if we try again we'll call
-        the nonexistent items() method and fail, so just don't encode it at
-        all."""
-        if content_type == MULTIPART_CONTENT and \
-            getattr(data, 'items', None) is not None:
-            data = encode_multipart(BOUNDARY, data)
-        
-        # print "session cookie = %s" % (
-        # self.cookies[django_settings.SESSION_COOKIE_NAME])
-        response = Client.post(self, path, data, content_type, **extra)
-        
-        if response is None:
-            raise Exception("POST method responded with None!")
-        
-        return self.capture_results('post', response, path, data,
-            content_type, **extra)
-    
-    def capture_results(self, method_name, response, *args, **kwargs):
-        # print("%s.%s(%s)" % (self, method_name, args))
-        self.last_method = method_name
-        self.last_method_args = args
-        self.last_method_kwargs = kwargs
-        
-        if not response.content:
-            return response # without setting the parsed attribute
-        
-        # http://stackoverflow.com/questions/5170252/whats-the-best-way-to-handle-nbsp-like-entities-in-xml-documents-with-lxml
-        x = """<?xml version="1.0" encoding="utf-8"?>\n""" + response.content
-        p = etree.XMLParser(remove_blank_text=True, resolve_entities=False)
-        
-        try:
-            r = etree.fromstring(x, p)
-        except SyntaxError as e:
-            import re
-            match = re.match('Opening and ending tag mismatch: ' +
-                '(\w+) line (\d+) and (\w+), line (\d+), column (\d+)', str(e))
-            if match:
-                lineno = int(match.group(2))
-            else:
-                match = re.match('.*, line (\d+), column (\d+)', str(e))
-                if match:
-                    lineno = int(match.group(1))
-
-            if not match:            
-                lineno = e.lineno
-                
-            lines = x.splitlines(True)
-            if lineno is not None:
-                first_line = max(lineno - 5, 1)
-                last_line = min(lineno + 5, len(lines))
-                print x
-                print "Context (line %s):\n%s" % (lineno,
-                    "".join(lines[first_line:last_line]))
-            else:
-                print repr(e)
-            raise e  
-        
-        setattr(response, 'parsed', r)
-        return response
-        
-    def retry(self):
-        """Try the same request again (e.g. after login)."""
-        # print "retry kwargs = %s" % self.last_method_kwargs 
-        return getattr(self, self.last_method)(*self.last_method_args,
-            **self.last_method_kwargs)
-    
-    def request(self, **request):
-        # print "request = %s" % request
-        return Client.request(self, **request)
 
 class DocumentsModuleTest(AptivateEnhancedTestCase):
     fixtures = ['test_permissions', 'test_users']
@@ -110,7 +25,6 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
     def setUp(self):
         super(DocumentsModuleTest, self).setUp()
         
-        self.client = SuperClient()
         self.john = IntranetUser.objects.get(username='john')
 
         # run a POST just to get a response with its embedded request...
