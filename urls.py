@@ -1,11 +1,11 @@
-from django.conf.urls.defaults import patterns, include, url
+from django.conf.urls.defaults import patterns, url
 
-import documents.views
+import views
 
 NAME_PREFIX = 'org.aptivate.intranet.documents.'
 
 urlpatterns = patterns('',
     # Examples:
-    url(r'^$', documents.views.IndexView.as_view(),
+    url(r'^$', views.IndexView.as_view(),
         name=NAME_PREFIX + "index"),
 )
