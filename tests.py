@@ -17,10 +17,10 @@ from django.test.client import Client, RequestFactory, encode_multipart, \
     MULTIPART_CONTENT, BOUNDARY
 from django.utils.functional import curry
 
-from lib.test_utils import AptivateEnhancedTestCase
+from binder.test_utils import AptivateEnhancedTestCase
+from binder.models import IntranetUser, Program
 from documents.admin import DocumentAdmin
 from documents.models import Document, DocumentType
-from binder.models import IntranetUser, Program
 
 class SuperClient(Client):
     def get(self, *args, **extra):
@@ -312,39 +312,44 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         # from lib.monkeypatch import breakpoint
         # breakpoint()
         doc.file.save(name="foo", content=ContentFile("foo bar baz"))
+        doc.authors = [self.john]
+        doc.programs = [Program.objects.all()[1]]
+        doc.save()
         
-        response = self.client.post(reverse('search'), {'q': 'foo'})
+        response = self.client.get(reverse('search'), {'q': 'foo'})
         self.assertEqual(response.status_code, 200)
-        self.assertIn('change_list', response.context,
-            "No change_list in response context: %s" % response.context.keys())
-        change_list = response.context['change_list']
+        
+        try:
+            table = response.context['table']
+        except KeyError as e:
+            self.fail("No table in response context: %s" %
+                response.context.keys())
 
-        results = change_list.result_list        
-        self.assertEqual(1, len(results), "Unexpected search results: %s" %
-            results)
+        from intranet.search.search import SearchTable 
+        self.assertIsInstance(table, SearchTable)
+        
+        data = table.data
+        from django_tables2.tables import TableData
+        self.assertIsInstance(data, TableData)
+        
+        queryset = data.queryset
+        from haystack.query import SearchQuerySet
+        self.assertIsInstance(queryset, SearchQuerySet)
+        
+        self.assertEqual(1, len(queryset), "Unexpected search results: %s" %
+            queryset)
         from haystack.utils import get_identifier
-        self.assertEqual(get_identifier(doc), results[0].id)
-        print object.__str__(results[0])
-        self.assertEqual(doc.get_absolute_url(),
-            change_list.url_for_result(results[0]))
-        
-        from django.contrib.admin.util import lookup_field
-        print lookup_field('title', results[0], change_list.model_admin)
+        self.assertEqual(get_identifier(doc), queryset[0].id)
+        # print object.__str__(queryset[0])
 
-        from django.contrib.admin.templatetags import admin_list
-        result_list_tag_ctx = admin_list.result_list(change_list)
-        headers = result_list_tag_ctx['result_headers']
+        self.assertEqual("<a href='%s'>%s</a>" % (doc.get_absolute_url(),
+            doc.title), table.render_title(doc.title, queryset[0]))
+
+        row = table.page.object_list.next()
+        self.assertEqual("<a href='%s'>%s</a>" % (doc.get_absolute_url(),
+            doc.title), row['title'])
+        self.assertEqual(doc.authors.all()[0].full_name, row['authors'])
+        self.assertEqual(doc.created, row['created'])
+        self.assertEqual(doc.programs.all()[0].name, row['programs'])
+        self.assertEqual(doc.document_type.name, row['document_type'])
         
-        self.assertDictContainsSubset({
-            "text": "Title",
-            "sortable": True,
-            "url": change_list.get_query_string({admin_list.ORDER_VAR: 0,
-                admin_list.ORDER_TYPE_VAR: 'asc'}),
-            "class_attrib": ' class="sorted descending"'
-        }, headers[0], "wrong details for column 1");
-        
-        self.assertIsNone(change_list.formset)
-        results = result_list_tag_ctx['results']
-        print repr(results[0])
-        self.assertEqual('<th><a href="%s">%s</a></th>' %
-            (doc.get_absolute_url(), doc.title), results[0][0])
