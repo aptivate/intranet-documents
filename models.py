@@ -55,10 +55,7 @@ class Document(models.Model):
     @models.permalink
     def get_absolute_url(self):
         """
-        from django.core.urlresolvers import reverse
-        url = reverse('admin:documents_document_change', [self.id])
-        print "reverse for %s = %s" % (self, url)
-        return url
+        The URL used in search results to link to the "document" found:
+        we use this to point to the read-only view page.
         """
-        # return ('admin:documents_document_change', [str(self.id)])
         return ('admin:documents_document_readonly', [str(self.id)])
