@@ -239,7 +239,7 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
             self.fail("No table in response context: %s" %
                 response.context.keys())
 
-        from intranet.search.search import SearchTable 
+        from search.search import SearchTable 
         self.assertIsInstance(table, SearchTable)
         
         data = table.data
