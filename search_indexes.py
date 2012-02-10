@@ -1,40 +1,15 @@
 import datetime
-import docx
 import subprocess
 import os
 
 from django.db.models import signals
 from django.core.files.uploadedfile import TemporaryUploadedFile, \
     InMemoryUploadedFile
+
 from haystack import indexes
 from haystack.fields import *
-# from haystack import site
-from magic import Magic
-from StringIO import StringIO
-from zipfile import ZipFile
 
 from models import Document
-
-from pdfminer.pdfparser import PDFDocument, PDFParser
-from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter, process_pdf
-from pdfminer.pdfdevice import PDFDevice, TagExtractor
-from pdfminer.converter import XMLConverter, HTMLConverter, TextConverter
-from pdfminer.cmapdb import CMapDB
-from pdfminer.layout import LAParams
-from pdfminer.layout import LTContainer, LTText, LTTextBox
-
-class TextConverterWithoutPageBreaks(TextConverter):
-    def receive_layout(self, ltpage):
-        def render(item):
-            if isinstance(item, LTContainer):
-                for child in item:
-                    render(child)
-            elif isinstance(item, LTText):
-                self.write_text(item.get_text())
-            if isinstance(item, LTTextBox):
-                self.write_text('\n')
-        render(ltpage)
-        return
 
 class DocumentIndex(indexes.RealTimeSearchIndex, indexes.Indexable):
     text = CharField(model_attr='file', document=True)
