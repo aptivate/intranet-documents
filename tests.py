@@ -26,6 +26,7 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         super(DocumentsModuleTest, self).setUp()
         
         self.john = IntranetUser.objects.get(username='john')
+        self.ringo = IntranetUser.objects.get(username='ringo')
 
         # run a POST just to get a response with its embedded request...
         self.login()
@@ -80,42 +81,32 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         if error_message is None:
             error_message = response.content
         return error_message
-        
-    def test_create_document_admin(self):
-        response = self.client.get(reverse('admin:documents_document_add'))
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(None, self.extract_error_message(response))
-        # self.assertEqual('admin/login.html', response.template_name)
-        
+
+    def create_document_by_post(self, **kwargs):
         f = StringIO('foobar')
         setattr(f, 'name', 'boink.png')
 
-        # without login, should fail and tell us to log in
-        self.client.logout()        
+        values = {
+            'title': 'foo',
+            'document_type': DocumentType.objects.all()[0].id,
+            'programs': Program.objects.all()[0].id,
+            'file': f,
+            'notes': 'whee',
+            'authors': self.john.id,
+        }
+        values.update(kwargs)
+        
         response = self.client.post(reverse('admin:documents_document_add'),
-            {
-                'title': 'foo',
-                'document_type': DocumentType.objects.all()[0].id,
-                'programs': Program.objects.all()[0].id,
-                'file': f,
-                'notes': 'whee',
-                'authors': self.john.id,
-            }, follow=True)
-        self.assertEqual("Please check your user name and password and try again.",
-            self.extract_error_message(response),
-            "POST without login did not fail as expected: %s" % response.content)
+            values, follow=True)
 
-        self.login()
-        response = self.client.retry()
-        # print response.content
-        # print "%s" % response.context
+        return response
+
+    def assert_changelist_not_admin_form_with_errors(self, response):
         self.assertTrue(hasattr(response, 'context'), "Missing context " +
             "in response: %s: %s" % (response, dir(response)))
         self.assertIsNotNone(response.context, "Empty context in response: " +
             "%s: %s" % (response, dir(response)))
-        
-        # If this succeeds, we get redirected to the changelist_view.
-        # If it fails, we get sent back to the edit page, with an error.
+
         if 'adminform' in response.context: 
             self.assertDictEqual({}, response.context['adminform'].form.errors)
             for fieldset in response.context['adminform']:
@@ -130,6 +121,26 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
             "admin form in response context: %s" % response)
         self.assertIn('cl', response.context, "Missing changelist " +
             "in response context: %s" % response)
+
+    def test_create_document_admin(self):
+        response = self.client.get(reverse('admin:documents_document_add'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(None, self.extract_error_message(response))
+        # self.assertEqual('admin/login.html', response.template_name)
+
+        # without login, should fail and tell us to log in
+        self.client.logout()
+        response = self.create_document_by_post()
+        self.assertEqual("Please check your user name and password and try again.",
+            self.extract_error_message(response),
+            "POST without login did not fail as expected: %s" % response.content)
+
+        self.login()
+        response = self.create_document_by_post()
+
+        # If this succeeds, we get redirected to the changelist_view.
+        # If it fails, we get sent back to the edit page, with an error.
+        self.assert_changelist_not_admin_form_with_errors(response)
 
         # did it save?
         doc = Document.objects.get()
@@ -221,7 +232,7 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
             "lacinia ut eu nisl.\n\n\n", self.index.prepare_text(doc))
 
     def test_document_page_changelist(self):
-        doc = Document(title='foo', document_type=DocumentType.objects.all()[0],
+        doc = Document(title='foo bar', document_type=DocumentType.objects.all()[0],
             notes="bonk")
         # from lib.monkeypatch import breakpoint
         # breakpoint()
@@ -229,6 +240,15 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         doc.authors = [self.john]
         doc.programs = [Program.objects.all()[1]]
         doc.save()
+
+        doc2 = Document(title='foo baz', document_type=DocumentType.objects.all()[1],
+            notes="whee")
+        # from lib.monkeypatch import breakpoint
+        # breakpoint()
+        doc2.file.save(name="foo", content=ContentFile("foo bar baz"))
+        doc2.authors = [self.ringo]
+        doc2.programs = [Program.objects.all()[2]]
+        doc2.save()
         
         response = self.client.get(reverse('search'), {'q': 'foo'})
         self.assertEqual(response.status_code, 200)
@@ -250,20 +270,29 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         from haystack.query import SearchQuerySet
         self.assertIsInstance(queryset, SearchQuerySet)
         
-        self.assertEqual(1, len(queryset), "Unexpected search results: %s" %
+        self.assertEqual(2, len(queryset), "Unexpected search results: %s" %
             queryset)
         from haystack.utils import get_identifier
-        self.assertEqual(get_identifier(doc), queryset[0].id)
+        result = [q for q in queryset if q.id == get_identifier(doc)]
+        self.assertEqual(get_identifier(doc), result[0].id)
+        result = result[0]
         # print object.__str__(queryset[0])
 
         self.assertEqual("<a href='%s'>%s</a>" % (doc.get_absolute_url(),
-            doc.title), table.render_title(doc.title, queryset[0]))
+            doc.title), table.render_title(doc.title, result))
 
-        row = table.page.object_list.next()
+        row = [r for r in table.page.object_list if r.record.pk == doc.id][0]
         self.assertEqual("<a href='%s'>%s</a>" % (doc.get_absolute_url(),
             doc.title), row['title'])
         self.assertEqual(doc.authors.all()[0].full_name, row['authors'])
         self.assertEqual(doc.created, row['created'])
         self.assertEqual(doc.programs.all()[0].name, row['programs'])
         self.assertEqual(doc.document_type.name, row['document_type'])
-        
+    
+    def test_document_upload_without_title_sets_title(self):
+        response = self.create_document_by_post(title='')
+        self.assert_changelist_not_admin_form_with_errors(response)
+
+        # did it save?
+        doc = Document.objects.get()
+        self.assertEqual('boink', doc.title)
