@@ -20,7 +20,7 @@ from documents.admin import DocumentAdmin
 from documents.models import Document, DocumentType
 
 class DocumentsModuleTest(AptivateEnhancedTestCase):
-    fixtures = ['test_permissions', 'test_users']
+    fixtures = ['ata_programs', 'test_permissions', 'test_users']
     
     def setUp(self):
         super(DocumentsModuleTest, self).setUp()
