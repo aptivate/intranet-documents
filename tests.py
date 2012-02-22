@@ -95,6 +95,12 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
             'authors': self.john.id,
         }
         values.update(kwargs)
+
+        # None cannot be sent over HTTP, so this means
+        # "delete the parameter" rather than "send a None value"
+        none_keys = [k for k, v in values.iteritems() if v is None]
+        for k in none_keys:
+            del values[k]
         
         response = self.client.post(reverse('admin:documents_document_add'),
             values, follow=True)
@@ -296,3 +302,11 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         # did it save?
         doc = Document.objects.get()
         self.assertEqual('boink', doc.title)
+
+    def test_document_upload_without_author_sets_author(self):
+        response = self.create_document_by_post(authors=None)
+        self.assert_changelist_not_admin_form_with_errors(response)
+
+        # did it save?
+        doc = Document.objects.get()
+        self.assertItemsEqual([self.john], doc.authors.all())
