@@ -310,3 +310,8 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         # did it save?
         doc = Document.objects.get()
         self.assertItemsEqual([self.john], doc.authors.all())
+
+    def test_create_document_without_file_only_url_works(self):
+        response = self.create_document_by_post(file=None,
+            hyperlink="http://foo.example.com/bar")
+        self.assert_changelist_not_admin_form_with_errors(response)

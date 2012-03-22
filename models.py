@@ -46,9 +46,6 @@ class Document(models.Model):
         except ValidationError as e:
             # print "on_validate raised a ValidationError: %s" % e
             raise e
-        except Exception as e:
-            # print "on_validate raised a generic exception: %s" % e
-            raise ValidationError(e)    
 
         # print "Document.clean finished"
             

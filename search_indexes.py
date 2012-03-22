@@ -47,10 +47,10 @@ class DocumentIndex(indexes.RealTimeSearchIndex, indexes.Indexable):
         """
         # Check to make sure we want to index this first.
         if self.should_update(instance, **kwargs):
+            from django.core.exceptions import ValidationError
             try:
                 self.prepare_text(instance)
-            except Exception as e:
-                from django.core.exceptions import ValidationError
+            except ValidationError as e:
                 raise ValidationError({'file': e})
 
     def safe_popen(self, cmd_with_args, *additional_args):
@@ -120,7 +120,8 @@ class DocumentIndex(indexes.RealTimeSearchIndex, indexes.Indexable):
         print "upload_to = %s" % document.file.field.upload_to
         """
 
-        if document.file is None:
+        if not document.file:
+            # nothing to index
             return
 
         # http://redmine.djity.net/projects/pythontika/wiki
