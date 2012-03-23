@@ -27,6 +27,7 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         
         self.john = IntranetUser.objects.get(username='john')
         self.ringo = IntranetUser.objects.get(username='ringo')
+        self.ken = IntranetUser.objects.get(username='ken')
 
         # run a POST just to get a response with its embedded request...
         self.login()
@@ -35,8 +36,11 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
 
         self.index = self.unified_index.get_index(Document) 
     
-    def login(self):
-        self.assertTrue(self.client.login(username=self.john.username,
+    def login(self, user=None):
+        if user is None:
+            user = self.john
+            
+        self.assertTrue(self.client.login(username=user.username,
             password='johnpassword'), "Login failed")
         self.assertIn(django_settings.SESSION_COOKIE_NAME, self.client.cookies) 
         """
@@ -315,3 +319,75 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         response = self.create_document_by_post(file=None,
             hyperlink="http://foo.example.com/bar")
         self.assert_changelist_not_admin_form_with_errors(response)
+
+    def assert_delete_document(self, doc):
+        response = self.client.get(reverse('admin:documents_document_delete',
+            args=[doc.id]))
+        self.assertEqual(response.status_code, 200,
+            "deletion confirmation page should load successfully, " +
+            "not this: %s" % response.content)
+        self.assertTemplateUsed(response, "admin/delete_confirmation.html",
+            "deletion confirmation page should render with " +
+            "delete_confirmation.html template, not this: %s" % 
+            response.content)
+        self.assertFalse(response.context['perms_lacking'],
+            "should not be any permissions lacking")
+        self.assertFalse(response.context['protected'],
+            "should not be protected")
+        self.assertEqual("Are you sure?", response.context['title'], 
+            "should be a question: are you sure?")
+
+        # import pdb; pdb.set_trace()
+        response = self.client.post(reverse('admin:documents_document_delete',
+            args=[doc.id]), {'post': 'yes'}, follow=True)
+        url = response.real_request.build_absolute_uri(
+            reverse('admin:documents_document_changelist'))
+        self.assertSequenceEqual([(url, 302)], response.redirect_chain,
+            "successful document deletion should be followed by a redirect, "+
+            "not this: %s" % response.content)
+        
+        self.assertSequenceEqual([], Document.objects.filter(id=doc.id),
+            "Document should have been deleted")
+
+    def test_uploader_can_delete_file(self):
+        response = self.create_document_by_post(title="whee")
+        self.assert_changelist_not_admin_form_with_errors(response)
+        self.assert_delete_document(Document.objects.get(title="whee"))
+
+    def test_admin_can_delete_file(self):
+        self.client.logout() # default user
+
+        self.login(self.john)
+        response = self.create_document_by_post(title="whee")
+        self.assert_changelist_not_admin_form_with_errors(response)
+        self.client.logout()
+        
+        doc = Document.objects.get(title="whee")
+        self.assertEqual(self.john, doc.uploader, "document uploader should " +
+            "be John")
+        
+        self.login(self.ringo)
+        self.assert_delete_document(Document.objects.get(title="whee"))
+
+    def test_ordinary_user_cannot_delete_file(self):
+        self.client.logout() # default user
+
+        self.login(self.john)
+        response = self.create_document_by_post(title="whee")
+        self.assert_changelist_not_admin_form_with_errors(response)
+        self.client.logout()
+        
+        doc = Document.objects.get(title="whee")
+        self.assertEqual(self.john, doc.uploader, "document uploader should " +
+            "be John")
+        
+        self.login(self.ken)
+        from django.core.exceptions import PermissionDenied
+        
+        def get(): self.client.get(reverse('admin:documents_document_delete',
+            args=[doc.id]))
+        self.assertRaises(PermissionDenied, get)
+
+        def post(): self.client.post(reverse('admin:documents_document_delete',
+            args=[doc.id]), {'post': 'yes'})
+        self.assertRaises(PermissionDenied, post)

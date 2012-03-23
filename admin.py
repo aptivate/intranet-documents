@@ -21,6 +21,7 @@ class DocumentForm(ModelForm):
 
     class Meta:
         model = models.Document
+        exclude = ('uploader',)
 
     def clean(self):
         """
@@ -99,7 +100,9 @@ class DocumentAdmin(AdminWithReadOnly):
         
         Unfortunately, this function doesn't return a form object, but a
         form class, so we can't just stuff the request into it. But we can
-        return a curried generator function instead.
+        return a curried generator function instead, taking advantage of
+        duck typing and how Django constructors work, and ModelAdmin will
+        construct an instance of our form by calling the generator.
         """
         
         def generator(data=None, files=None, auto_id='id_%s', prefix=None, 
@@ -112,6 +115,94 @@ class DocumentAdmin(AdminWithReadOnly):
         generator.base_fields = DocumentForm.base_fields
         
         return generator
+
+    def save_form(self, request, form, change):
+        """
+        Override the default save_form to force the owner of the document
+        to be the current user, whatever they may have POSTed to us.
+        """
+        doc = super(DocumentAdmin, self).save_form(request, form, change)
+        doc.uploader = request.user
+        return doc
+
+    """
+    def delete_view(self, request, object_id, extra_context=None):
+        return AdminWithReadOnly.delete_view(self, request, object_id, extra_context=extra_context)
+    """
+
+    def has_delete_permission(self, request, document=None):
+        """
+        Allow document uploaders to delete their own documents, despite
+        lacking the Delete Document privilege.
+        """
+        
+        if document.uploader == request.user:
+            return True
+        else:
+            return super(DocumentAdmin, self).has_delete_permission(request, 
+                document)
+            
+    def get_deleted_objects(self, objs, opts, request, using):
+        """
+        Find all objects related to ``objs`` that should also be deleted. ``objs``
+        must be a homogenous iterable of objects (e.g. a QuerySet).
+    
+        Returns a nested list of strings suitable for display in the
+        template with the ``unordered_list`` filter.
+        
+        Copied from django.contrib.admin.util.get_deleted_objects and
+        extended to override delete permissions to take the object's
+        uploader into account, by allowing deletion if has_delete_permission()
+        returns True.
+        """
+
+        from django.contrib.admin.util import NestedObjects
+        collector = NestedObjects(using=using)
+        collector.collect(objs)
+        perms_needed = set()
+    
+        def format_callback(obj):
+            has_admin = obj.__class__ in self.admin_site._registry
+            opts = obj._meta
+
+            from django.utils.html import escape
+            from django.utils.safestring import mark_safe
+            from django.utils.text import capfirst
+            from django.core.urlresolvers import reverse
+    
+            if has_admin:
+                from django.contrib.admin.util import quote
+                admin_url = reverse('%s:%s_%s_change'
+                                    % (self.admin_site.name,
+                                       opts.app_label,
+                                       opts.object_name.lower()),
+                                    None, (quote(obj._get_pk_val()),))
+                p = '%s.%s' % (opts.app_label,
+                               opts.get_delete_permission())
+                
+                if isinstance(obj, self.model):
+                    if not self.has_delete_permission(request, obj):
+                        perms_needed.add(opts.verbose_name)
+                elif not request.user.has_perm(p):
+                    perms_needed.add(opts.verbose_name)
+                # Display a link to the admin page.
+
+                return mark_safe(u'%s: <a href="%s">%s</a>' %
+                                 (escape(capfirst(opts.verbose_name)),
+                                  admin_url,
+                                  escape(obj)))
+            else:
+                # Don't display link to edit, because it either has no
+                # admin or is edited inline.
+                from django.utils.encoding import force_unicode
+                return u'%s: %s' % (capfirst(opts.verbose_name),
+                                    force_unicode(obj))
+    
+        to_delete = collector.nested(format_callback)
+    
+        protected = [format_callback(obj) for obj in collector.protected]
+    
+        return to_delete, perms_needed, protected
 
 django.contrib.admin.site.register(models.Document, DocumentAdmin)
 
