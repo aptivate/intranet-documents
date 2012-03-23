@@ -16,9 +16,12 @@ class Document(models.Model):
     programs = models.ManyToManyField(binder.models.Program)
     file = models.FileField(upload_to='documents', blank=True)
     notes = models.TextField()
-    authors = models.ManyToManyField(binder.models.IntranetUser)
+    authors = models.ManyToManyField(binder.models.IntranetUser,
+        related_name="documents_authored")
     created = models.DateTimeField(auto_now_add = True)
     hyperlink = models.URLField(blank=True)
+    uploader = models.ForeignKey(binder.models.IntranetUser,
+        related_name="documents_uploaded", null=True)
 
     on_validate = django.dispatch.Signal(providing_args=['instance'])    
     
