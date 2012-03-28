@@ -354,6 +354,9 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         self.assert_changelist_not_admin_form_with_errors(response)
         self.assert_delete_document(Document.objects.get(title="whee"))
 
+    def test_admin_index_page_works(self):
+        self.client.get(reverse("admin:index")) # no errors
+
     def test_admin_can_delete_file(self):
         self.client.logout() # default user
 

@@ -136,11 +136,11 @@ class DocumentAdmin(AdminWithReadOnly):
         lacking the Delete Document privilege.
         """
         
-        if document.uploader == request.user:
+        if document is not None and document.uploader == request.user:
             return True
-        else:
-            return super(DocumentAdmin, self).has_delete_permission(request, 
-                document)
+
+        return super(DocumentAdmin, self).has_delete_permission(request, 
+            document)
             
     def get_deleted_objects(self, objs, opts, request, using):
         """
