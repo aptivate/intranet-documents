@@ -124,7 +124,10 @@ class DocumentAdmin(AdminWithReadOnly):
 
         document = form.instance
 
-        if document.uploader: # Nobody to notify otherwise.
+        if document.uploader and document.uploader != request.user:
+            # If there's no uploader then there's nobody to notify.
+            # We also don't notify a user when they modify their own document.
+            #
             # Documents being created by add_view don't have an uploader,
             # so they don't end up sending an email either, which is what
             # we want. We could also check for change=True.

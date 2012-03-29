@@ -396,11 +396,47 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         def post(): self.client.post(reverse('admin:documents_document_delete',
             args=[doc.id]), {'post': 'yes'})
         self.assertRaises(PermissionDenied, post)
+
+    def assert_no_emails(self):
+        self.assertListEqual([], self.emails)
+
+    def assert_modification_email(self, document):
+        self.assertEqual(1, len(self.emails), self.emails)
+        email = self.emails[0]
         
-    def test_document_modify_sends_email(self):
+        """
+        expected_email = self.load_email_from_template(
+            'email/document_modified.txt.django', document=doc,
+            user=self.current_user, to=doc.uploader.email)
+        """
+        
+        expected_context = {
+            'document': document,
+            'user': self.current_user,
+            'settings': django_settings,
+        }
+        
+        self.assertDictContainsSubset(expected_context, email.context)
+        
+        from mail_templated import EmailMessage
+        expected_email = EmailMessage('email/document_modified.txt.django',
+            expected_context, to=[self.current_user.email])
+
+        self.assertEqual(expected_email.subject, email.subject)
+        self.assertEqual(expected_email.from_email, email.from_email)
+        self.assertItemsEqual([document.uploader.email], email.to)
+        self.assertEqual(expected_email.body, email.body)
+        
+        history_url = reverse('admin:documents_document_history',
+            args=[document.id])
+        history_url = self.absolute_url(history_url)
+        self.assertEqual(1, email.body.count(history_url), 
+            "Couldn't find '%s' in response:\n\n%s" % (history_url, email.body))
+        
+    def test_document_modify_by_different_user_sends_email(self):
         self.create_document_by_post()
         doc = Document.objects.order_by('-id')[0]
-        self.assertListEqual([], self.emails)
+        self.assert_no_emails()
 
         self.client.logout()
         self.login(self.ringo)
@@ -417,37 +453,26 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
             values, follow=True)
         self.assert_changelist_not_admin_form_with_errors(response)
 
-        self.assertEqual(1, len(self.emails), self.emails)
-        email = self.emails[0]
-        
-        """
-        expected_email = self.load_email_from_template(
-            'email/document_modified.txt.django', document=doc,
-            user=self.current_user, to=doc.uploader.email)
-        """
-        
-        expected_context = {
-            'document': doc,
-            'user': self.current_user,
-            'settings': django_settings,
-        }
-        
-        self.assertDictContainsSubset(expected_context, email.context)
-        
-        from mail_templated import EmailMessage
-        expected_email = EmailMessage('email/document_modified.txt.django',
-            expected_context, to=[self.current_user.email])
+        self.assert_modification_email(doc)
 
-        self.assertEqual(expected_email.subject, email.subject)
-        self.assertEqual(expected_email.from_email, email.from_email)
-        self.assertItemsEqual([doc.uploader.email], email.to)
-        self.assertEqual(expected_email.body, email.body)
+    def test_document_modify_by_same_user_does_not_send_email(self):
+        self.create_document_by_post()
+        doc = Document.objects.order_by('-id')[0]
+        self.assert_no_emails()
+
+        from django.forms.models import model_to_dict
+        values = model_to_dict(doc)
+
+        f = StringIO('whee')
+        setattr(f, 'name', 'boink.pdf')
+        values['file'] = f
         
-        history_url = reverse('admin:documents_document_history',
-            args=[doc.id])
-        history_url = self.absolute_url(history_url)
-        self.assertEqual(1, email.body.count(history_url), 
-            "Couldn't find '%s' in response:\n\n%s" % (history_url, email.body))
+        response = self.client.post(
+            reverse('admin:documents_document_change', args=[doc.id]),
+            values, follow=True)
+        self.assert_changelist_not_admin_form_with_errors(response)
+
+        self.assert_no_emails()
 
     def test_document_without_uploader_does_not_crash(self):
         self.create_document_by_post()
@@ -458,17 +483,17 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         self.client.get(reverse('admin:documents_document_readonly',
             args=[doc.id]))
         
-        self.assertItemsEqual([], self.emails)
+        self.assert_no_emails()
         
     def test_document_view_does_not_send_email(self):
         self.create_document_by_post()
         doc = Document.objects.order_by('-id')[0]
-        self.assertItemsEqual([], self.emails)
+        self.assert_no_emails()
 
         self.client.get(reverse('admin:documents_document_change',
             args=[doc.id]))
-        self.assertItemsEqual([], self.emails)
+        self.assert_no_emails()
 
         self.client.get(reverse('admin:documents_document_readonly',
             args=[doc.id]))
-        self.assertItemsEqual([], self.emails)
+        self.assert_no_emails()
