@@ -121,9 +121,29 @@ class DocumentAdmin(AdminWithReadOnly):
         Override the default save_form to force the owner of the document
         to be the current user, whatever they may have POSTed to us.
         """
-        doc = super(DocumentAdmin, self).save_form(request, form, change)
-        doc.uploader = request.user
-        return doc
+
+        document = form.instance
+
+        if document.uploader: # Nobody to notify otherwise.
+            # Documents being created by add_view don't have an uploader,
+            # so they don't end up sending an email either, which is what
+            # we want. We could also check for change=True.
+
+            from django.conf import settings
+            context = {
+                'document': document,
+                'user': request.user,
+                'settings': settings,
+            }
+
+            from mail_templated import EmailMessage
+            email = EmailMessage('email/document_modified.txt.django',
+                context, to=[document.uploader.email])
+            email.send()
+
+        document = super(DocumentAdmin, self).save_form(request, form, change)
+        document.uploader = request.user
+        return document
 
     """
     def delete_view(self, request, object_id, extra_context=None):
@@ -203,25 +223,6 @@ class DocumentAdmin(AdminWithReadOnly):
         protected = [format_callback(obj) for obj in collector.protected]
     
         return to_delete, perms_needed, protected
-    
-    def change_view(self, request, object_id, extra_context=None):
-        from django.contrib.admin.util import unquote
-        document = self.get_object(request, unquote(object_id))
-
-        from django.conf import settings
-        context = {
-            'document': document,
-            'user': request.user,
-            'settings': settings,
-        }
-
-        from mail_templated import EmailMessage
-        email = EmailMessage('email/document_modified.txt.django',
-            context, to=[document.uploader.email])
-        email.send()
-        
-        return super(DocumentAdmin, self).change_view(request, object_id, 
-            extra_context=extra_context)
 
 django.contrib.admin.site.register(models.Document, DocumentAdmin)
 

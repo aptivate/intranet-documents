@@ -397,54 +397,6 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
             args=[doc.id]), {'post': 'yes'})
         self.assertRaises(PermissionDenied, post)
         
-    def load_email_from_template(self, template_name, **context):
-        """Obsolete. Use django-mail-templated instead."""
-        
-        from django.template.loader import get_template
-        template = get_template(template_name)
-
-        from django.template import Context
-        rendered = template.render(Context(context))
-
-        from_line = None
-        subject_line = None
-        headers = []
-        last_header = None
-        
-        (extra_header_text, newline, body_text) = rendered.partition('\n\n')
-        for line in extra_header_text.splitlines():
-            if line.startswith('\t') or line.startswith(' '):
-                last_header += line
-            else:
-                if last_header is not None:
-                    headers.append(last_header)
-                last_header = line
-        if last_header is not None:
-            headers.append(last_header)
-        
-        extra_headers = {}
-        
-        for header in headers:
-            import re
-            mo = re.match("^([A-Za-z0-9_-]*): (.*)", header)
-            
-            if mo is None:
-                raise Exception("Invalid header line: %s" % header)
-            
-            name, value = mo.group(1, 2)
-            name = name.lower()
-            
-            if name == 'from':
-                from_line = value
-            elif name == 'subject':
-                subject_line = value
-            else:
-                extra_headers[mo.group(1)] = value
-        
-        from django.core.mail import EmailMessage
-        return EmailMessage(subject_line, body_text, from_line,
-            [context['to']], [], headers=extra_headers)
-
     def test_document_modify_sends_email(self):
         self.create_document_by_post()
         doc = Document.objects.order_by('-id')[0]
@@ -491,4 +443,32 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         self.assertItemsEqual([doc.uploader.email], email.to)
         self.assertEqual(expected_email.body, email.body)
         
+        history_url = reverse('admin:documents_document_history',
+            args=[doc.id])
+        history_url = self.absolute_url(history_url)
+        self.assertEqual(1, email.body.count(history_url), 
+            "Couldn't find '%s' in response:\n\n%s" % (history_url, email.body))
+
+    def test_document_without_uploader_does_not_crash(self):
+        self.create_document_by_post()
+        doc = Document.objects.order_by('-id')[0]
+        doc.uploader = None
+        doc.save()
         
+        self.client.get(reverse('admin:documents_document_readonly',
+            args=[doc.id]))
+        
+        self.assertItemsEqual([], self.emails)
+        
+    def test_document_view_does_not_send_email(self):
+        self.create_document_by_post()
+        doc = Document.objects.order_by('-id')[0]
+        self.assertItemsEqual([], self.emails)
+
+        self.client.get(reverse('admin:documents_document_change',
+            args=[doc.id]))
+        self.assertItemsEqual([], self.emails)
+
+        self.client.get(reverse('admin:documents_document_readonly',
+            args=[doc.id]))
+        self.assertItemsEqual([], self.emails)

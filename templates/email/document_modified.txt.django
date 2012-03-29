@@ -1,3 +1,5 @@
+{% load absurl %}
+
 {% block subject %}
 kevin
 {% endblock %}
@@ -6,7 +8,7 @@ kevin
 Your document has been modified by {{ user.full_name }}.
 
 You can see the document history here:
-{% url admin:documents_document_history document.id %}
+{% absurl admin:documents_document_history document.id %}
 
 You will not receive any more notifications for changes to this document,
 because {{ user.full_name }} is now the uploader.
