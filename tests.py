@@ -48,6 +48,8 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
             self.client.cookies[django_settings.SESSION_COOKIE_NAME])
         """
         
+        self.current_user = user
+        
     def test_create_document_object(self):
         doc = Document(title="foo", document_type=DocumentType.objects.all()[0],
             notes="bonk")
@@ -394,3 +396,99 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         def post(): self.client.post(reverse('admin:documents_document_delete',
             args=[doc.id]), {'post': 'yes'})
         self.assertRaises(PermissionDenied, post)
+        
+    def load_email_from_template(self, template_name, **context):
+        """Obsolete. Use django-mail-templated instead."""
+        
+        from django.template.loader import get_template
+        template = get_template(template_name)
+
+        from django.template import Context
+        rendered = template.render(Context(context))
+
+        from_line = None
+        subject_line = None
+        headers = []
+        last_header = None
+        
+        (extra_header_text, newline, body_text) = rendered.partition('\n\n')
+        for line in extra_header_text.splitlines():
+            if line.startswith('\t') or line.startswith(' '):
+                last_header += line
+            else:
+                if last_header is not None:
+                    headers.append(last_header)
+                last_header = line
+        if last_header is not None:
+            headers.append(last_header)
+        
+        extra_headers = {}
+        
+        for header in headers:
+            import re
+            mo = re.match("^([A-Za-z0-9_-]*): (.*)", header)
+            
+            if mo is None:
+                raise Exception("Invalid header line: %s" % header)
+            
+            name, value = mo.group(1, 2)
+            name = name.lower()
+            
+            if name == 'from':
+                from_line = value
+            elif name == 'subject':
+                subject_line = value
+            else:
+                extra_headers[mo.group(1)] = value
+        
+        from django.core.mail import EmailMessage
+        return EmailMessage(subject_line, body_text, from_line,
+            [context['to']], [], headers=extra_headers)
+
+    def test_document_modify_sends_email(self):
+        self.create_document_by_post()
+        doc = Document.objects.order_by('-id')[0]
+        self.assertListEqual([], self.emails)
+
+        self.client.logout()
+        self.login(self.ringo)
+        
+        from django.forms.models import model_to_dict
+        values = model_to_dict(doc)
+
+        f = StringIO('whee')
+        setattr(f, 'name', 'boink.pdf')
+        values['file'] = f
+        
+        response = self.client.post(
+            reverse('admin:documents_document_change', args=[doc.id]),
+            values, follow=True)
+        self.assert_changelist_not_admin_form_with_errors(response)
+
+        self.assertEqual(1, len(self.emails), self.emails)
+        email = self.emails[0]
+        
+        """
+        expected_email = self.load_email_from_template(
+            'email/document_modified.txt.django', document=doc,
+            user=self.current_user, to=doc.uploader.email)
+        """
+        
+        expected_context = {
+            'document': doc,
+            'user': self.current_user,
+            'settings': django_settings,
+        }
+        
+        self.assertDictContainsSubset(expected_context, email.context)
+        
+        from mail_templated import EmailMessage
+        expected_email = EmailMessage('email/document_modified.txt.django',
+            expected_context, to=[self.current_user.email])
+
+        self.assertEqual(expected_email.subject, email.subject)
+        self.assertEqual(expected_email.from_email, email.from_email)
+        self.assertItemsEqual([doc.uploader.email], email.to)
+        self.assertEqual(expected_email.body, email.body)
+        
+        

@@ -203,6 +203,25 @@ class DocumentAdmin(AdminWithReadOnly):
         protected = [format_callback(obj) for obj in collector.protected]
     
         return to_delete, perms_needed, protected
+    
+    def change_view(self, request, object_id, extra_context=None):
+        from django.contrib.admin.util import unquote
+        document = self.get_object(request, unquote(object_id))
+
+        from django.conf import settings
+        context = {
+            'document': document,
+            'user': request.user,
+            'settings': settings,
+        }
+
+        from mail_templated import EmailMessage
+        email = EmailMessage('email/document_modified.txt.django',
+            context, to=[document.uploader.email])
+        email.send()
+        
+        return super(DocumentAdmin, self).change_view(request, object_id, 
+            extra_context=extra_context)
 
 django.contrib.admin.site.register(models.Document, DocumentAdmin)
 
