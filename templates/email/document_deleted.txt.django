@@ -1,17 +1,14 @@
 {% load absurl %}
 
 {% block subject %}
-[{{ settings.APP_TITLE }}] Document modified
+[{{ settings.APP_TITLE }}] Document deleted
 {% endblock %}
 
 {% block body %}
-Your document has been modified by {{ user.full_name }}.
+Your document has been deleted by {{ user.full_name }}.
 
 You can see the document history here:
 {% absurl admin:documents_document_history document.id %}
-
-You will not receive any more notifications for changes to this document,
-because {{ user.full_name }} is now the uploader.
 
 This is an automated email from the {{ settings.APP_TITLE }}.
 {% endblock %}

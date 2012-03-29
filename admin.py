@@ -115,15 +115,8 @@ class DocumentAdmin(AdminWithReadOnly):
         generator.base_fields = DocumentForm.base_fields
         
         return generator
-
-    def save_form(self, request, form, change):
-        """
-        Override the default save_form to force the owner of the document
-        to be the current user, whatever they may have POSTed to us.
-        """
-
-        document = form.instance
-
+    
+    def send_notification_email(self, document, request, template):
         if document.uploader and document.uploader != request.user:
             # If there's no uploader then there's nobody to notify.
             # We also don't notify a user when they modify their own document.
@@ -131,6 +124,11 @@ class DocumentAdmin(AdminWithReadOnly):
             # Documents being created by add_view don't have an uploader,
             # so they don't end up sending an email either, which is what
             # we want. We could also check for change=True.
+
+            # Load a copy of the document, so that it still has an ID
+            # if the caller delete()s it later
+            
+            document = models.Document.objects.get(id=document.id) 
 
             from django.conf import settings
             context = {
@@ -140,13 +138,34 @@ class DocumentAdmin(AdminWithReadOnly):
             }
 
             from mail_templated import EmailMessage
-            email = EmailMessage('email/document_modified.txt.django',
-                context, to=[document.uploader.email])
+            email = EmailMessage(template, context,
+                to=[document.uploader.email])
             email.send()
+
+    def save_form(self, request, form, change):
+        """
+        Override the default save_form() to send notification emails,
+        and to force the uploader field of the document to be the current
+        user, whatever they may have POSTed to us.
+        """
+
+        document = form.instance
+        self.send_notification_email(document, request, 
+            'email/document_modified.txt.django')
 
         document = super(DocumentAdmin, self).save_form(request, form, change)
         document.uploader = request.user
         return document
+    
+    def delete_model(self, request, document):
+        """
+        Override the default delete_model() to send notification emails.
+        """
+
+        self.send_notification_email(document, request, 
+            'email/document_deleted.txt.django')
+        
+        return super(DocumentAdmin, self).delete_model(request, document)
 
     """
     def delete_view(self, request, object_id, extra_context=None):

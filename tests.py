@@ -400,27 +400,24 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
     def assert_no_emails(self):
         self.assertListEqual([], self.emails)
 
-    def assert_modification_email(self, document):
-        self.assertEqual(1, len(self.emails), self.emails)
+    def assert_email(self, document, template):
+        self.assertTrue(self.emails, "Expected email was not sent")
+        self.assertEqual(1, len(self.emails),
+            "Unexpectedly, more than one email was sent: %s" % self.emails)
+        
         email = self.emails[0]
         
-        """
-        expected_email = self.load_email_from_template(
-            'email/document_modified.txt.django', document=doc,
-            user=self.current_user, to=doc.uploader.email)
-        """
-        
         expected_context = {
-            'document': document,
             'user': self.current_user,
             'settings': django_settings,
+            'document': document,
         }
         
         self.assertDictContainsSubset(expected_context, email.context)
         
         from mail_templated import EmailMessage
-        expected_email = EmailMessage('email/document_modified.txt.django',
-            expected_context, to=[self.current_user.email])
+        expected_email = EmailMessage(template, expected_context, 
+            to=[self.current_user.email])
 
         self.assertEqual(expected_email.subject, email.subject)
         self.assertEqual(expected_email.from_email, email.from_email)
@@ -432,7 +429,10 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         history_url = self.absolute_url(history_url)
         self.assertEqual(1, email.body.count(history_url), 
             "Couldn't find '%s' in response:\n\n%s" % (history_url, email.body))
-        
+
+    def assert_modification_email(self, document):
+        self.assert_email(document, 'email/document_modified.txt.django')
+
     def test_document_modify_by_different_user_sends_email(self):
         self.create_document_by_post()
         doc = Document.objects.order_by('-id')[0]
@@ -496,4 +496,23 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
 
         self.client.get(reverse('admin:documents_document_readonly',
             args=[doc.id]))
+        self.assert_no_emails()
+
+    def test_document_delete_by_different_user_sends_email(self):
+        self.create_document_by_post()
+        doc = Document.objects.order_by('-id')[0]
+        self.assert_no_emails()
+
+        self.client.logout()
+        self.login(self.ringo)
+        
+        self.assert_delete_document(doc)
+        self.assert_email(doc, 'email/document_deleted.txt.django')
+
+    def test_document_delete_by_same_user_does_not_send_email(self):
+        self.create_document_by_post()
+        doc = Document.objects.order_by('-id')[0]
+        self.assert_no_emails()
+
+        self.assert_delete_document(doc)
         self.assert_no_emails()
