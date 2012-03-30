@@ -49,31 +49,10 @@ class DocumentForm(ModelForm):
             cleaned_data['authors'] = [self.request.user]
                 
         return cleaned_data
-        
-    """    
-    def _post_clean(self):
-        import pdb; pdb.set_trace()
-        return super(DocumentForm, self)._post_clean()
-    
-    def save(self, commit=True):
-        import pdb; pdb.set_trace()
-        return ModelForm.save(self, commit=commit)
-    """
 
 class DocumentAdmin(AdminWithReadOnly):
     list_display = ('title', models.Document.get_authors)
 
-    """
-    formfield_overrides = {
-        'title': {'required': False},
-        'authors': {'required': False},
-    }
-
-    def formfield_for_dbfield(self, db_field, **kwargs):
-        import pdb; pdb.set_trace()
-        return super(DocumentAdmin, self).formfield_for_dbfield(db_field, **kwargs)
-    """
-    
     def queryset(self, request):
         if request.user.groups.filter(name='Guest'):
             limit_to_program = request.user.program
@@ -87,12 +66,6 @@ class DocumentAdmin(AdminWithReadOnly):
         else:
             return qs
     
-    """
-    def add_view(self, request, form_url='', extra_context=None):
-        import pdb; pdb.set_trace()
-        return AdminWithReadOnly.add_view(self, request, form_url=form_url, extra_context=extra_context)
-    """
-
     def get_form(self, request, obj=None, **kwargs):
         """
         The form needs to know who the current user is, but doesn't normally
