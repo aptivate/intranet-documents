@@ -433,6 +433,22 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
     def assert_modification_email(self, document):
         self.assert_email(document, 'email/document_modified.txt.django')
 
+    def fake_file_upload(self):
+        f = StringIO('whee')
+        setattr(f, 'name', 'boink.pdf')
+        return f
+
+    def change_document_by_post(self, document, **new_values):
+        from django.forms.models import model_to_dict
+        values = model_to_dict(document)
+        values.update(new_values)
+
+        response = self.client.post(
+            reverse('admin:documents_document_change', args=[document.id]),
+            values, follow=True)
+        self.assert_changelist_not_admin_form_with_errors(response)
+        return response
+
     def test_document_modify_by_different_user_sends_email(self):
         self.create_document_by_post()
         doc = Document.objects.order_by('-id')[0]
@@ -441,18 +457,7 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         self.client.logout()
         self.login(self.ringo)
         
-        from django.forms.models import model_to_dict
-        values = model_to_dict(doc)
-
-        f = StringIO('whee')
-        setattr(f, 'name', 'boink.pdf')
-        values['file'] = f
-        
-        response = self.client.post(
-            reverse('admin:documents_document_change', args=[doc.id]),
-            values, follow=True)
-        self.assert_changelist_not_admin_form_with_errors(response)
-
+        self.change_document_by_post(doc, file=self.fake_file_upload())
         self.assert_modification_email(doc)
 
     def test_document_modify_by_same_user_does_not_send_email(self):
@@ -460,18 +465,7 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         doc = Document.objects.order_by('-id')[0]
         self.assert_no_emails()
 
-        from django.forms.models import model_to_dict
-        values = model_to_dict(doc)
-
-        f = StringIO('whee')
-        setattr(f, 'name', 'boink.pdf')
-        values['file'] = f
-        
-        response = self.client.post(
-            reverse('admin:documents_document_change', args=[doc.id]),
-            values, follow=True)
-        self.assert_changelist_not_admin_form_with_errors(response)
-
+        self.change_document_by_post(doc, file=self.fake_file_upload())
         self.assert_no_emails()
 
     def test_document_without_uploader_does_not_crash(self):
