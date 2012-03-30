@@ -6,11 +6,12 @@ import django.contrib.admin
 from django.core.validators import EMPTY_VALUES
 from django.forms import ModelForm
 from django.forms.util import ErrorList
-from binder.admin import AdminWithReadOnly
+from binder.admin import AdminWithReadOnly, AdminYesNoWidget
 
 class DocumentForm(ModelForm):
     title = models.Document._meta.get_field('title').formfield(required=False)
     authors = models.Document._meta.get_field('authors').formfield(required=False)
+    confidential = models.Document._meta.get_field('confidential').formfield(widget=AdminYesNoWidget)
     
     def __init__(self, request, data=None, files=None, auto_id='id_%s', 
         prefix=None, initial=None, error_class=ErrorList, label_suffix=':', 

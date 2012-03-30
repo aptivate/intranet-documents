@@ -22,6 +22,7 @@ class Document(models.Model):
     hyperlink = models.URLField(blank=True)
     uploader = models.ForeignKey(binder.models.IntranetUser,
         related_name="documents_uploaded", null=True)
+    confidential = models.BooleanField("CONFIDENTIAL DO NOT SHARE OUTSIDE ATA")
 
     on_validate = django.dispatch.Signal(providing_args=['instance'])    
     

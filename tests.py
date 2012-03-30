@@ -476,7 +476,6 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         
         self.client.get(reverse('admin:documents_document_readonly',
             args=[doc.id]))
-        
         self.assert_no_emails()
         
     def test_document_view_does_not_send_email(self):
@@ -510,3 +509,17 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
 
         self.assert_delete_document(doc)
         self.assert_no_emails()
+    
+    def test_document_has_confidential_flag(self):
+        self.create_document_by_post(confidential=True)
+        doc = Document.objects.order_by('-id')[0]
+        self.assertTrue(doc.confidential)
+
+        self.change_document_by_post(doc, confidential=False)
+        doc = Document.objects.get(id=doc.id)
+        self.assertFalse(doc.confidential)
+
+        response = self.client.get(reverse('admin:documents_document_readonly',
+            args=[doc.id]))
+        self.assertEqual('No', self.extract_admin_form_field(response, 
+            'confidential').contents())
