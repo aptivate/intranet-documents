@@ -15,6 +15,7 @@ class DocumentIndex(indexes.RealTimeSearchIndex, indexes.Indexable):
     text = CharField(model_attr='file', document=True)
     title = CharField(model_attr='title')
     notes = CharField(model_attr='notes')
+    uploader = CharField(model_attr='uploader')
     authors = MultiValueField()
     programs = MultiValueField()
     document_type = IntegerField(model_attr='document_type__id')
@@ -22,13 +23,16 @@ class DocumentIndex(indexes.RealTimeSearchIndex, indexes.Indexable):
     
     def get_model(self):
         return Document
-    
-    def prepare_programs(self, document):
-        return [p.id for p in document.programs.all()]
 
+    def prepare_uploader(self, document):
+        return document.uploader.full_name
+    
     def prepare_authors(self, document):
         return [u.id for u in document.authors.all()]
         
+    def prepare_programs(self, document):
+        return [p.id for p in document.programs.all()]
+
     def _setup_save(self):
         """Before allowing the model to be saved, we should check that
         we can index the document properly."""
