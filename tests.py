@@ -48,8 +48,6 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
             self.client.cookies[django_settings.SESSION_COOKIE_NAME])
         """
         
-        self.current_user = user
-        
     def test_create_document_object(self):
         doc = Document(title="foo", document_type=DocumentType.objects.all()[0],
             notes="bonk")
