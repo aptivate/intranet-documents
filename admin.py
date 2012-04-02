@@ -12,6 +12,7 @@ class DocumentForm(ModelForm):
     title = models.Document._meta.get_field('title').formfield(required=False)
     authors = models.Document._meta.get_field('authors').formfield(required=False)
     confidential = models.Document._meta.get_field('confidential').formfield(widget=AdminYesNoWidget)
+    uploader = models.Document._meta.get_field('uploader').formfield(required=False)
     
     def __init__(self, request, data=None, files=None, auto_id='id_%s', 
         prefix=None, initial=None, error_class=ErrorList, label_suffix=':', 
@@ -22,7 +23,6 @@ class DocumentForm(ModelForm):
 
     class Meta:
         model = models.Document
-        exclude = ('uploader',)
 
     def clean(self):
         """
@@ -53,6 +53,7 @@ class DocumentForm(ModelForm):
 
 class DocumentAdmin(AdminWithReadOnly):
     list_display = ('title', models.Document.get_authors)
+    readonly_fields = ('uploader',)
 
     def queryset(self, request):
         if request.user.groups.filter(name='Guest'):

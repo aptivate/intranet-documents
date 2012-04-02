@@ -113,6 +113,11 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
 
         return response
 
+    def assert_create_document_by_post(self, **kwargs):
+        response = self.create_document_by_post(**kwargs)
+        self.assert_changelist_not_admin_form_with_errors(response)
+        return response
+
     def assert_changelist_not_admin_form_with_errors(self, response):
         self.assertTrue(hasattr(response, 'context'), "Missing context " +
             "in response: %s: %s" % (response, dir(response)))
@@ -148,11 +153,7 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
             "POST without login did not fail as expected: %s" % response.content)
 
         self.login()
-        response = self.create_document_by_post()
-
-        # If this succeeds, we get redirected to the changelist_view.
-        # If it fails, we get sent back to the edit page, with an error.
-        self.assert_changelist_not_admin_form_with_errors(response)
+        self.assert_create_document_by_post()
 
         # did it save?
         doc = Document.objects.get()
@@ -302,25 +303,22 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         self.assertEqual(doc.document_type.name, row['document_type'])
     
     def test_document_upload_without_title_sets_title(self):
-        response = self.create_document_by_post(title='')
-        self.assert_changelist_not_admin_form_with_errors(response)
+        self.assert_create_document_by_post(title='')
 
         # did it save?
         doc = Document.objects.get()
         self.assertEqual('boink', doc.title)
 
     def test_document_upload_without_author_sets_author(self):
-        response = self.create_document_by_post(authors=None)
-        self.assert_changelist_not_admin_form_with_errors(response)
+        self.assert_create_document_by_post(authors=None)
 
         # did it save?
         doc = Document.objects.get()
         self.assertItemsEqual([self.john], doc.authors.all())
 
     def test_create_document_without_file_only_url_works(self):
-        response = self.create_document_by_post(file=None,
+        self.assert_create_document_by_post(file=None,
             hyperlink="http://foo.example.com/bar")
-        self.assert_changelist_not_admin_form_with_errors(response)
 
     def assert_delete_document(self, doc):
         response = self.client.get(reverse('admin:documents_document_delete',
@@ -352,8 +350,7 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
             "Document should have been deleted")
 
     def test_uploader_can_delete_file(self):
-        response = self.create_document_by_post(title="whee")
-        self.assert_changelist_not_admin_form_with_errors(response)
+        self.assert_create_document_by_post(title='whee')
         self.assert_delete_document(Document.objects.get(title="whee"))
 
     def test_admin_index_page_works(self):
@@ -363,8 +360,7 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         self.client.logout() # default user
 
         self.login(self.john)
-        response = self.create_document_by_post(title="whee")
-        self.assert_changelist_not_admin_form_with_errors(response)
+        self.assert_create_document_by_post(title='whee')
         self.client.logout()
         
         doc = Document.objects.get(title="whee")
@@ -378,8 +374,7 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         self.client.logout() # default user
 
         self.login(self.john)
-        response = self.create_document_by_post(title="whee")
-        self.assert_changelist_not_admin_form_with_errors(response)
+        self.assert_create_document_by_post(title='whee')
         self.client.logout()
         
         doc = Document.objects.get(title="whee")
@@ -450,7 +445,8 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         return response
 
     def test_document_modify_by_different_user_sends_email(self):
-        self.create_document_by_post()
+        self.assert_create_document_by_post()
+
         doc = Document.objects.order_by('-id')[0]
         self.assert_no_emails()
 
@@ -461,7 +457,8 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         self.assert_modification_email(doc)
 
     def test_document_modify_by_same_user_does_not_send_email(self):
-        self.create_document_by_post()
+        self.assert_create_document_by_post()
+
         doc = Document.objects.order_by('-id')[0]
         self.assert_no_emails()
 
@@ -469,7 +466,8 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         self.assert_no_emails()
 
     def test_document_without_uploader_does_not_crash(self):
-        self.create_document_by_post()
+        self.assert_create_document_by_post()
+        
         doc = Document.objects.order_by('-id')[0]
         doc.uploader = None
         doc.save()
@@ -479,7 +477,8 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         self.assert_no_emails()
         
     def test_document_view_does_not_send_email(self):
-        self.create_document_by_post()
+        self.assert_create_document_by_post()
+
         doc = Document.objects.order_by('-id')[0]
         self.assert_no_emails()
 
@@ -492,7 +491,8 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         self.assert_no_emails()
 
     def test_document_delete_by_different_user_sends_email(self):
-        self.create_document_by_post()
+        self.assert_create_document_by_post()
+
         doc = Document.objects.order_by('-id')[0]
         self.assert_no_emails()
 
@@ -503,7 +503,8 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         self.assert_email(doc, 'email/document_deleted.txt.django')
 
     def test_document_delete_by_same_user_does_not_send_email(self):
-        self.create_document_by_post()
+        self.assert_create_document_by_post()
+        
         doc = Document.objects.order_by('-id')[0]
         self.assert_no_emails()
 
@@ -511,7 +512,8 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         self.assert_no_emails()
     
     def test_document_has_confidential_flag(self):
-        self.create_document_by_post(confidential=True)
+        self.assert_create_document_by_post(confidential=True)
+
         doc = Document.objects.order_by('-id')[0]
         self.assertTrue(doc.confidential)
 
@@ -523,3 +525,18 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
             args=[doc.id]))
         self.assertEqual('No', self.extract_admin_form_field(response, 
             'confidential').contents())
+
+    def test_uploader_field_shown_on_form(self):
+        self.assert_create_document_by_post()
+        doc = Document.objects.order_by('-id')[0]
+        
+        response = self.client.get(reverse('admin:documents_document_readonly',
+            args=[doc.id]))
+        field = self.extract_admin_form_field(response, 'uploader')
+
+        response = self.client.get(reverse('admin:documents_document_change',
+            args=[doc.id]))
+        field = self.extract_admin_form_field(response, 'uploader')
+
+        from django.contrib.admin.helpers import AdminReadonlyField
+        self.assertIsInstance(field, AdminReadonlyField) 
