@@ -15,7 +15,7 @@ class DocumentIndex(indexes.RealTimeSearchIndex, indexes.Indexable):
     text = CharField(model_attr='file', document=True)
     title = CharField(model_attr='title')
     notes = CharField(model_attr='notes')
-    uploader = CharField(model_attr='uploader')
+    uploader = CharField(model_attr='uploader', null=True)
     authors = MultiValueField()
     programs = MultiValueField()
     document_type = IntegerField(model_attr='document_type__id')
@@ -25,7 +25,10 @@ class DocumentIndex(indexes.RealTimeSearchIndex, indexes.Indexable):
         return Document
 
     def prepare_uploader(self, document):
-        return document.uploader.full_name
+        if document.uploader:
+            return document.uploader.full_name
+        else:
+            return None
     
     def prepare_authors(self, document):
         return [u.id for u in document.authors.all()]

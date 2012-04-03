@@ -20,7 +20,7 @@ from documents.admin import DocumentAdmin
 from documents.models import Document, DocumentType
 
 class DocumentsModuleTest(AptivateEnhancedTestCase):
-    fixtures = ['ata_programs', 'test_permissions', 'test_users']
+    fixtures = ['test_programs', 'test_permissions', 'test_users']
     
     def setUp(self):
         super(DocumentsModuleTest, self).setUp()
@@ -39,14 +39,9 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
     def login(self, user=None):
         if user is None:
             user = self.john
-            
-        self.assertTrue(self.client.login(username=user.username,
-            password='johnpassword'), "Login failed")
+        
+        super(DocumentsModuleTest, self).login(user)
         self.assertIn(django_settings.SESSION_COOKIE_NAME, self.client.cookies) 
-        """
-        print "session cookie = %s" % (
-            self.client.cookies[django_settings.SESSION_COOKIE_NAME])
-        """
         
     def test_create_document_object(self):
         doc = Document(title="foo", document_type=DocumentType.objects.all()[0],
@@ -519,6 +514,7 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
             'confidential').contents())
 
     def test_uploader_field_shown_on_form(self):
+        self.login()
         self.assert_create_document_by_post()
         doc = Document.objects.order_by('-id')[0]
         
@@ -534,6 +530,7 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         self.assertIsInstance(field, AdminReadonlyField) 
 
     def test_document_download_link_shown_on_readonly_form(self):
+        self.login()
         self.assert_create_document_by_post()
         doc = Document.objects.order_by('-id')[0]
         
