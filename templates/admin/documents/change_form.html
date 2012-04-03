@@ -4,6 +4,12 @@
 http://djangosnippets.org/snippets/1636/
 {% endcomment %}
 
+{% block body_classes %}
+	{% if adminform.form.instance.confidential %}
+		document-confidential
+	{% endif %}
+{% endblock %}
+
 {% block after_related_objects %}
 {{ block.super }}
 {% include "save_changes_prompt.html.django" %}
