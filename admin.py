@@ -36,7 +36,7 @@ class DocumentForm(ModelForm):
         cleaned_data = ModelForm.clean(self)
         
         if (cleaned_data['title'] in EMPTY_VALUES and
-            cleaned_data['file'] is not None):
+            cleaned_data.get('file', None) is not None):
             import re
             m = re.match('(.+)\.(\w+)', cleaned_data['file'].name)
             
