@@ -6,19 +6,21 @@ import django.contrib.admin
 from django.core.validators import EMPTY_VALUES
 from django.forms import ModelForm
 from django.forms.util import ErrorList
-from binder.admin import AdminWithReadOnly, AdminYesNoWidget
+from binder.admin import AdminWithReadOnly, AdminYesNoWidget, AdminFileWidgetWithSize
 
 class DocumentForm(ModelForm):
     title = models.Document._meta.get_field('title').formfield(required=False)
     authors = models.Document._meta.get_field('authors').formfield(required=False)
     confidential = models.Document._meta.get_field('confidential').formfield(widget=AdminYesNoWidget)
     uploader = models.Document._meta.get_field('uploader').formfield(required=False)
+    file = models.Document._meta.get_field('file').formfield(widget=AdminFileWidgetWithSize)
     
     def __init__(self, request, data=None, files=None, auto_id='id_%s', 
         prefix=None, initial=None, error_class=ErrorList, label_suffix=':', 
         empty_permitted=False, instance=None):
-        ModelForm.__init__(self, data, files, auto_id, prefix, initial,
-                error_class, label_suffix, empty_permitted, instance)
+        
+        super(DocumentForm, self).__init__(data, files, auto_id, prefix, 
+            initial, error_class, label_suffix, empty_permitted, instance)
         self.request = request
 
     class Meta:

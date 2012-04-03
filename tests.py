@@ -80,12 +80,6 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         # return message or None
         return error_message
 
-    def extract_error_message_fallback(self, response):
-        error_message = self.extract_error_message(response)
-        if error_message is None:
-            error_message = response.content
-        return error_message
-
     def create_document_by_post(self, **kwargs):
         f = StringIO('foobar')
         setattr(f, 'name', 'boink.png')
@@ -538,3 +532,18 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
 
         from django.contrib.admin.helpers import AdminReadonlyField
         self.assertIsInstance(field, AdminReadonlyField) 
+
+    def test_document_download_link_shown_on_readonly_form(self):
+        self.assert_create_document_by_post()
+        doc = Document.objects.order_by('-id')[0]
+        
+        response = self.client.get(reverse('admin:documents_document_readonly',
+            args=[doc.id]))
+        field = self.extract_admin_form_field(response, 'file')
+        field_name = field.field['field']
+        self.assertEqual('file', field_name)
+        
+        from binder.admin import AdminFileWidgetWithSize
+        self.assertIsInstance(field.form[field_name].field.widget,
+            AdminFileWidgetWithSize)
+        
