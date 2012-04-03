@@ -1,0 +1,7 @@
+{% extends "admin/view_form.html" %}
+
+{% block body_classes %}
+	{% if adminform.form.instance.confidential %}
+		document-confidential
+	{% endif %}
+{% endblock %}
