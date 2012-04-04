@@ -544,3 +544,10 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         self.assertIsInstance(field.form[field_name].field.widget,
             AdminFileWidgetWithSize)
         
+    def test_document_has_external_author_field(self):
+        self.login()
+        self.assert_create_document_by_post(external_authors="John Smith")
+        doc = Document.objects.order_by('-id')[0]
+        self.assertEqual("John Smith", doc.external_authors)
+        
+        
