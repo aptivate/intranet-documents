@@ -25,6 +25,9 @@ class DocumentForm(ModelForm):
 
     class Meta:
         model = models.Document
+        fields = ('title', 'document_type', 'programs', 'notes',
+            'confidential', 'file', 'hyperlink', 'authors',
+            'external_authors', 'uploader')
 
     def clean(self):
         """
