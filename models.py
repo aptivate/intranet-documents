@@ -15,7 +15,7 @@ class Document(models.Model):
     document_type = models.ForeignKey(DocumentType)
     programs = models.ManyToManyField(binder.models.Program)
     file = models.FileField(upload_to='documents', blank=True)
-    notes = models.TextField()
+    notes = models.TextField(verbose_name="Description")
     authors = models.ManyToManyField(binder.models.IntranetUser,
         related_name="documents_authored")
     external_authors = models.CharField(max_length=255, blank=True)
