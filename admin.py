@@ -9,11 +9,7 @@ from django.forms.util import ErrorList
 from binder.admin import AdminWithReadOnly, AdminYesNoWidget, AdminFileWidgetWithSize
 
 class DocumentForm(ModelForm):
-    title = models.Document._meta.get_field('title').formfield(required=False)
-    authors = models.Document._meta.get_field('authors').formfield(required=False)
-    confidential = models.Document._meta.get_field('confidential').formfield(widget=AdminYesNoWidget)
-    uploader = models.Document._meta.get_field('uploader').formfield(required=False)
-    file = models.Document._meta.get_field('file').formfield(widget=AdminFileWidgetWithSize)
+    MULTIPLE_SELECT_HELP = u'Hold down Ctrl to select multiple options'
     
     def __init__(self, request, data=None, files=None, auto_id='id_%s', 
         prefix=None, initial=None, error_class=ErrorList, label_suffix=':', 
@@ -22,7 +18,14 @@ class DocumentForm(ModelForm):
         super(DocumentForm, self).__init__(data, files, auto_id, prefix, 
             initial, error_class, label_suffix, empty_permitted, instance)
         self.request = request
-
+        self.fields['title'].required = False
+        self.fields['programs'].help_text = self.MULTIPLE_SELECT_HELP
+        self.fields['authors'].required = False
+        self.fields['authors'].help_text = self.MULTIPLE_SELECT_HELP
+        self.fields['confidential'].widget = AdminYesNoWidget()
+        self.fields['uploader'].required = False
+        self.fields['file'].widget = AdminFileWidgetWithSize()
+        
     class Meta:
         model = models.Document
         fields = ('title', 'document_type', 'programs', 'notes',
@@ -51,7 +54,6 @@ class DocumentForm(ModelForm):
                 cleaned_data['title'] = cleaned_data['file'].name
 
         if (cleaned_data['authors'] in EMPTY_VALUES):
-            # import pdb; pdb.set_trace()
             cleaned_data['authors'] = [self.request.user]
                 
         return cleaned_data
