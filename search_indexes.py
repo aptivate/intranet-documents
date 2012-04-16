@@ -131,28 +131,23 @@ class DocumentIndex(indexes.RealTimeSearchIndex, indexes.Indexable):
             # nothing to index
             return
 
-        # http://redmine.djity.net/projects/pythontika/wiki
-        import tika
-        tika.getVMEnv().attachCurrentThread()
-        parser = tika.AutoDetectParser()
+        from httplib import HTTPConnection
+        conn = HTTPConnection('localhost', 9998, True, 30)
 
         real_file_object = document.file.file
 
         if isinstance(real_file_object, InMemoryUploadedFile):
             buffer = document.file.read()
-            input = tika.StringBufferInputStream(buffer)
         else:
             if isinstance(real_file_object, TemporaryUploadedFile):
                 path = real_file_object.temporary_file_path()
             else:
                 path = real_file_object.name
-            input = tika.FileInputStream(tika.File(path))
+            buffer = open(path)
         
-        # Create handler for content, metadata and context
-        content = tika.BodyContentHandler(-1)
-        metadata = tika.Metadata()
-        context = tika.ParseContext()
-
-        # Parse the data and display result
-        parser.parse(input, content, metadata, context)
-        return content.toString()
+        conn.request('PUT', '/tika', buffer)
+        response = conn.getresponse()
+        if response.status != 200:
+            raise Exception("Unknown response from TIKA server: %s: %s" %
+                (response.status, response.reason))
+        return response.read()
