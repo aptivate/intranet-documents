@@ -6,6 +6,7 @@ import django.contrib.admin
 from django.core.validators import EMPTY_VALUES
 from django.forms import ModelForm
 from django.forms.util import ErrorList
+
 from binder.admin import AdminWithReadOnly, AdminYesNoWidget, AdminFileWidgetWithSize
 
 class DocumentForm(ModelForm):
@@ -19,9 +20,12 @@ class DocumentForm(ModelForm):
             initial, error_class, label_suffix, empty_permitted, instance)
         self.request = request
         self.fields['title'].required = False
+        self.fields['document_type'].queryset.order_by('name')
         self.fields['programs'].help_text = self.MULTIPLE_SELECT_HELP
+        self.fields['programs'].queryset.order_by('name')
         self.fields['authors'].required = False
         self.fields['authors'].help_text = self.MULTIPLE_SELECT_HELP
+        self.fields['authors'].queryset.order_by('full_name')
         self.fields['confidential'].widget = AdminYesNoWidget()
         self.fields['uploader'].required = False
         self.fields['file'].widget = AdminFileWidgetWithSize()
