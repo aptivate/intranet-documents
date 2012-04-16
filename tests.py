@@ -58,6 +58,7 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         
     def extract_error_message(self, response):
         error_message = response.parsed.findtext('.//div[@class="error-message"]')
+
         if error_message is None:
             error_message = response.parsed.findtext('.//p[@class="errornote"]')
         
@@ -219,14 +220,14 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
             "Lorem ipsum dolor sit amet, consectetur adipiscing elit.\n" +
             "Praesent pharetra urna eu arcu blandit nec pretium odio " +
             "fermentum.\n" +
-            "Sed in orci quis risus interdum lacinia ut eu nisl.\n\n",
+            "Sed in orci quis risus interdum lacinia ut eu nisl.\n",
             self.index.prepare_text(doc))
 
     def test_pdf_indexing(self):
         doc = Document()
         self.assign_fixture_to_filefield('word_pdf.pdf', doc.file) 
         
-        self.assertEquals("Lorem ipsum dolor sit amet, consectetur " +
+        self.assertEquals("\nLorem ipsum dolor sit amet, consectetur " +
             "adipiscing elit.\nPraesent pharetra urna eu arcu blandit " +
             "nec pretium odio fermentum. Sed in orci quis risus interdum " +
             "lacinia ut eu nisl.\n\n\n", self.index.prepare_text(doc))
@@ -259,7 +260,7 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
             self.fail("No table in response context: %s" %
                 response.context.keys())
 
-        from search.search import SearchTable 
+        from search.tables import SearchTable 
         self.assertIsInstance(table, SearchTable)
         
         data = table.data
@@ -549,5 +550,22 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         self.assert_create_document_by_post(external_authors="John Smith")
         doc = Document.objects.order_by('-id')[0]
         self.assertEqual("John Smith", doc.external_authors)
+
+    """        
+    def test_document_model_choice_fields_in_order(self):
+        self.login()
+        response = self.client.get(reverse('admin:documents_document_add'))
         
+        document_type = self.extract_admin_form_field(response, 'document_type')
+        self.assertItemsEqual(['name'], 
+            document_type.field.field.queryset.query.order_by)
+
+        programs = self.extract_admin_form_field(response, 'programs')
+        self.assertItemsEqual(['name'], 
+            programs.field.field.queryset.query.order_by)
+
+        authors = self.extract_admin_form_field(response, 'authors')
+        self.assertItemsEqual(['name'], 
+            authors.field.field.queryset.query.order_by)
+    """
         
