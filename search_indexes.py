@@ -131,8 +131,18 @@ class DocumentIndex(indexes.RealTimeSearchIndex, indexes.Indexable):
             # nothing to index
             return
 
-        from httplib import HTTPConnection
-        conn = HTTPConnection('localhost', 9998, True, 30)
+        from django.conf import settings
+        from urlparse import urlparse
+        tika = urlparse(settings.TIKA_SERVER)
+
+        from httplib import HTTPConnection, HTTPSConnection
+        if tika.scheme == 'http':
+            conn = HTTPConnection(tika.netloc, None, True, 30)
+        elif tika.scheme == 'https':
+            conn = HTTPSConnection(tika.netloc, None, True, 30)
+        else:
+            raise Exception("Unknown URL scheme '%s' in Apache Tika URL: %s" %
+                (tika.scheme, settings.TIKA_SERVER))
 
         real_file_object = document.file.file
 
@@ -145,9 +155,12 @@ class DocumentIndex(indexes.RealTimeSearchIndex, indexes.Indexable):
                 path = real_file_object.name
             buffer = open(path)
         
-        conn.request('PUT', '/tika', buffer)
+        conn.request('PUT', '%s/tika' % tika.path, buffer)
         response = conn.getresponse()
+
         if response.status != 200:
-            raise Exception("Unknown response from TIKA server: %s: %s" %
-                (response.status, response.reason))
+            raise Exception("Unknown response from TIKA server " +
+                "(%s): %s: %s" % (settings.TIKA_SERVER, response.status,
+                    response.reason))
+
         return response.read()
