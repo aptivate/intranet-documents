@@ -153,7 +153,7 @@ class DocumentIndex(indexes.RealTimeSearchIndex, indexes.Indexable):
                 path = real_file_object.temporary_file_path()
             else:
                 path = real_file_object.name
-            buffer = open(path)
+            buffer = open(path, 'rb')
         
         conn.request('PUT', '%s/tika' % tika.path, buffer)
         response = conn.getresponse()
