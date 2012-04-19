@@ -6,11 +6,17 @@ from django.db import models
 # http://djangosnippets.org/snippets/1054/
 
 class DocumentType(models.Model):
+    class Meta:
+        ordering = ('name',)
+    
     name = models.CharField(max_length=255, unique=True)
     def __unicode__(self):
         return self.name
 
 class Document(models.Model):
+    class Meta:
+        ordering = ('title',)
+    
     title = models.CharField(max_length=255, unique=True)
     document_type = models.ForeignKey(DocumentType)
     programs = models.ManyToManyField(binder.models.Program)
