@@ -1,0 +1,37 @@
+[
+    {
+        "pk": 2,
+        "model": "documents.documenttype",
+        "fields": {
+            "name": "Report"
+        }
+    },
+    {
+        "pk": 3,
+        "model": "documents.documenttype",
+        "fields": {
+            "name": "Presentation"
+        }
+    },
+    {
+        "pk": 4,
+        "model": "documents.documenttype",
+        "fields": {
+            "name": "Data"
+        }
+    },
+    {
+        "pk": 6,
+        "model": "documents.documenttype",
+        "fields": {
+            "name": "Paper"
+        }
+    },
+    {
+        "pk": 8,
+        "model": "documents.documenttype",
+        "fields": {
+            "name": "Policy"
+        }
+    }
+]
