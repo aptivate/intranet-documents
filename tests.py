@@ -173,6 +173,13 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
             "nec pretium odio fermentum. Sed in orci quis risus interdum " +
             "lacinia ut eu nisl.\n", self.index.prepare_text(doc))
 
+    def test_word_2007_unicode(self):
+        doc = Document()
+        self.assign_fixture_to_filefield('smartquote-bullet.docx', doc.file) 
+        from django.utils.encoding import force_unicode
+        self.assertEquals(u'\u2019\n\u2022\t\n',
+            force_unicode(self.index.prepare_text(doc)))
+
     def test_excel_2003_indexing(self):
         doc = Document()
         self.assign_fixture_to_filefield('excel_2003.xls', doc.file) 
