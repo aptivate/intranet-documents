@@ -56,6 +56,7 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
     def test_document_admin_class(self):
         self.assertIn(Document, admin.site._registry)
         self.assertIsInstance(admin.site._registry[Document], DocumentAdmin)
+        self.assertEqual(1, )
         
     def extract_error_message(self, response):
         error_message = response.parsed.findtext('.//div[@class="error-message"]')
@@ -577,3 +578,13 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
             authors.field.field.queryset.query.order_by)
     """
         
+    def test_document_admin_form_without_duplicate_fields(self):
+        response = self.client.get(reverse('admin:documents_document_add'))
+        self.assertEqual(response.status_code, 200)
+
+        form = self.assertInDict('adminform', response.context)
+        seen = {}
+        for name, value in self.extract_fields(form):
+            self.assertNotIn(name, seen, ("%s field should not have been " +
+                "included twice") % name)
+            seen[name] = True
