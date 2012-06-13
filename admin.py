@@ -3,8 +3,6 @@
 import models
 import django.contrib.admin
 
-from django.forms.util import ErrorList
-
 from binder.admin import AdminWithReadOnly
 from forms import DocumentForm
 
@@ -24,29 +22,9 @@ class DocumentAdmin(AdminWithReadOnly):
             return qs.filter(programs=limit_to_program)
         else:
             return qs
-    
-    def get_form(self, request, obj=None, **kwargs):
-        """
-        The form needs to know who the current user is, but doesn't normally
-        have access to the request to find out.
-        
-        Unfortunately, this function doesn't return a form object, but a
-        form class, so we can't just stuff the request into it. But we can
-        return a curried generator function instead, taking advantage of
-        duck typing and how Django constructors work, and ModelAdmin will
-        construct an instance of our form by calling the generator.
-        """
-        
-        def generator(data=None, files=None, auto_id='id_%s', prefix=None, 
-            initial=None, error_class=ErrorList, label_suffix=':', 
-            empty_permitted=False, instance=None):
-            return DocumentForm(request, data, files, auto_id, prefix, initial,
-                error_class, label_suffix, empty_permitted, instance)
-        
-        # to keep ModelAdmin.get_fieldsets() happy:
-        generator.base_fields = DocumentForm.base_fields
-        
-        return generator
+
+    def get_form_class(self, request, obj=None, **kwargs):
+        return DocumentForm
     
     def send_notification_email(self, document, request, template):
         if document.uploader and document.uploader != request.user:
