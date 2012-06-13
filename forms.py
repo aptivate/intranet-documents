@@ -2,22 +2,20 @@ from django.core.validators import EMPTY_VALUES
 from django.forms import ModelForm
 from django.forms.util import ErrorList
 
-from binder.admin import AdminYesNoWidget, AdminFileWidgetWithSize
+from binder.widgets import AdminYesNoWidget, AdminFileWidgetWithSize
 
 from models import Document
 
 class DocumentForm(ModelForm):
     MULTIPLE_SELECT_HELP = u'Hold down Ctrl to select multiple options'
     
-    def __init__(self, request, data=None, files=None, auto_id='id_%s', 
+    def __init__(self, data=None, files=None, auto_id='id_%s', 
         prefix=None, initial=None, error_class=ErrorList, label_suffix=':', 
         empty_permitted=False, instance=None):
         
-        # import pdb; pdb.set_trace()
-        
         super(DocumentForm, self).__init__(data, files, auto_id, prefix, 
             initial, error_class, label_suffix, empty_permitted, instance)
-        self.request = request
+        
         self.fields['title'].required = False
         self.fields['document_type'].queryset.order_by('name')
         self.fields['programs'].help_text = self.MULTIPLE_SELECT_HELP
@@ -60,4 +58,3 @@ class DocumentForm(ModelForm):
             cleaned_data['authors'] = [self.request.user]
                 
         return cleaned_data
-
