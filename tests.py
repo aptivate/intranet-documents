@@ -56,28 +56,7 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
     def test_document_admin_class(self):
         self.assertIn(Document, admin.site._registry)
         self.assertIsInstance(admin.site._registry[Document], DocumentAdmin)
-        self.assertEqual(1, )
         
-    def extract_error_message(self, response):
-        error_message = response.parsed.findtext('.//div[@class="error-message"]')
-
-        if error_message is None:
-            error_message = response.parsed.findtext('.//p[@class="errornote"]')
-        
-        if error_message is not None:
-            # extract individual field errors, if any
-            more_error_messages = response.parsed.findtext('.//td[@class="errors-cell"]')
-            if more_error_messages is not None:
-                error_message += more_error_messages
-            
-            # trim and canonicalise whitespace
-            error_message = error_message.strip()
-            import re
-            error_message = re.sub('\\s+', ' ', error_message)
-            
-        # return message or None
-        return error_message
-
     def create_document_by_post(self, **kwargs):
         f = StringIO('foobar')
         setattr(f, 'name', 'boink.png')
@@ -107,27 +86,6 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         response = self.create_document_by_post(**kwargs)
         self.assert_changelist_not_admin_form_with_errors(response)
         return response
-
-    def assert_changelist_not_admin_form_with_errors(self, response):
-        self.assertTrue(hasattr(response, 'context'), "Missing context " +
-            "in response: %s: %s" % (response, dir(response)))
-        self.assertIsNotNone(response.context, "Empty context in response: " +
-            "%s: %s" % (response, dir(response)))
-
-        if 'adminform' in response.context: 
-            self.assertDictEqual({}, response.context['adminform'].form.errors)
-            for fieldset in response.context['adminform']:
-                for line in fieldset:
-                    self.assertIsNone(line.errors)
-                    for field in line:
-                        self.assertIsNone(field.errors)
-            self.assertIsNone(response.context['adminform'].form.non_field_errors)
-            self.assertIsNone(self.extract_error_message(response))
-
-        self.assertNotIn('adminform', response.context, "Unexpected " +
-            "admin form in response context: %s" % response)
-        self.assertIn('cl', response.context, "Missing changelist " +
-            "in response context: %s" % response)
 
     def test_create_document_admin(self):
         response = self.client.get(reverse('admin:documents_document_add'))
@@ -550,7 +508,7 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         field_name = field.field['field']
         self.assertEqual('file', field_name)
         
-        from binder.admin import AdminFileWidgetWithSize
+        from binder.widgets import AdminFileWidgetWithSize
         self.assertIsInstance(field.form[field_name].field.widget,
             AdminFileWidgetWithSize)
         
