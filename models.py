@@ -26,7 +26,7 @@ class Document(models.Model):
         related_name="documents_authored")
     external_authors = models.CharField(max_length=255, blank=True)
     created = models.DateTimeField(auto_now_add = True)
-    hyperlink = models.URLField(blank=True)
+    hyperlink = models.URLField(blank=True, verify_exists=False)
     uploader = models.ForeignKey(binder.models.IntranetUser,
         related_name="documents_uploaded", null=True)
     confidential = models.BooleanField("CONFIDENTIAL DO NOT SHARE OUTSIDE ATA")
