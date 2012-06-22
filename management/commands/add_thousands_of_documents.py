@@ -9,8 +9,8 @@ class Command(NoArgsCommand):
     help = 'Add thousands of documents to the Whoosh search index to stress it'
 
     def handle_noargs(self, **options):
-        doc_dir = os.path.join(os.path.dirname(__file__), '..', '..', '..',
-            '..', '..', 'doc')
+        doc_dir = os.path.join(os.path.dirname(__file__), '..', '..',
+            'fixtures')
         
         doctypes = DocumentType.objects.all()
         programs = Program.objects.all()
