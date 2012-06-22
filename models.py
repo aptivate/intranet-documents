@@ -1,4 +1,4 @@
-import binder.models
+import binder.configurable
 import django.dispatch
 
 from django.db import models
@@ -22,12 +22,12 @@ class Document(models.Model):
     programs = models.ManyToManyField(binder.models.Program)
     file = models.FileField(upload_to='documents', blank=True)
     notes = models.TextField(verbose_name="Description")
-    authors = models.ManyToManyField(binder.models.IntranetUser,
+    authors = models.ManyToManyField(binder.configurable.UserModel,
         related_name="documents_authored")
     external_authors = models.CharField(max_length=255, blank=True)
     created = models.DateTimeField(auto_now_add = True)
     hyperlink = models.URLField(blank=True, verify_exists=False)
-    uploader = models.ForeignKey(binder.models.IntranetUser,
+    uploader = models.ForeignKey(binder.configurable.UserModel,
         related_name="documents_uploaded", null=True)
     confidential = models.BooleanField("CONFIDENTIAL DO NOT SHARE OUTSIDE ATA")
 
