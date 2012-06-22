@@ -25,11 +25,12 @@ class Document(models.Model):
     authors = models.ManyToManyField(binder.configurable.UserModel,
         related_name="documents_authored")
     external_authors = models.CharField(max_length=255, blank=True)
-    created = models.DateTimeField(auto_now_add = True)
+    created = models.DateTimeField(auto_now_add=True)
     hyperlink = models.URLField(blank=True, verify_exists=False)
     uploader = models.ForeignKey(binder.configurable.UserModel,
         related_name="documents_uploaded", null=True)
     confidential = models.BooleanField("CONFIDENTIAL DO NOT SHARE OUTSIDE ATA")
+    deleted = models.BooleanField()
 
     on_validate = django.dispatch.Signal(providing_args=['instance'])    
     

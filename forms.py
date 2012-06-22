@@ -9,6 +9,12 @@ from models import Document
 class DocumentForm(ModelForm):
     MULTIPLE_SELECT_HELP = u'Hold down Ctrl to select multiple options'
     
+    class Meta:
+        model = Document
+        fields = ('title', 'document_type', 'programs', 'notes',
+            'confidential', 'file', 'hyperlink', 'authors',
+            'external_authors', 'uploader', 'deleted')
+
     def __init__(self, data=None, files=None, auto_id='id_%s', 
         prefix=None, initial=None, error_class=ErrorList, label_suffix=':', 
         empty_permitted=False, instance=None):
@@ -27,12 +33,6 @@ class DocumentForm(ModelForm):
         self.fields['uploader'].required = False
         self.fields['file'].widget = AdminFileWidgetWithSize()
         
-    class Meta:
-        model = Document
-        fields = ('title', 'document_type', 'programs', 'notes',
-            'confidential', 'file', 'hyperlink', 'authors',
-            'external_authors', 'uploader')
-
     def clean(self):
         """
         If the title is not set, default to the name of the attached

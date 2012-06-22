@@ -199,6 +199,26 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
             "nec pretium odio fermentum. Sed in orci quis risus interdum " +
             "lacinia ut eu nisl.\n\n\n", self.index.prepare_text(doc))
 
+    def assert_search_results_table_get_queryset(self, response):
+        try:
+            table = response.context['results_table']
+        except KeyError as e:
+            self.fail("No table in response context: %s" %
+                response.context.keys())
+
+        from search.tables import SearchTable 
+        self.assertIsInstance(table, SearchTable)
+        
+        data = table.data
+        from django_tables2.tables import TableData
+        self.assertIsInstance(data, TableData)
+        
+        queryset = data.queryset
+        from haystack.query import SearchQuerySet
+        self.assertIsInstance(queryset, SearchQuerySet)
+        
+        return table, queryset
+
     def test_document_page_changelist(self):
         doc = Document(title='foo bar', document_type=DocumentType.objects.all()[0],
             notes="bonk")
@@ -221,22 +241,7 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         response = self.client.get(reverse('search'), {'q': 'foo'})
         self.assertEqual(response.status_code, 200)
         
-        try:
-            table = response.context['table']
-        except KeyError as e:
-            self.fail("No table in response context: %s" %
-                response.context.keys())
-
-        from search.tables import SearchTable 
-        self.assertIsInstance(table, SearchTable)
-        
-        data = table.data
-        from django_tables2.tables import TableData
-        self.assertIsInstance(data, TableData)
-        
-        queryset = data.queryset
-        from haystack.query import SearchQuerySet
-        self.assertIsInstance(queryset, SearchQuerySet)
+        table, queryset = self.assert_search_results_table_get_queryset(response)
         
         self.assertEqual(2, len(queryset), "Unexpected search results: %s" %
             queryset)
@@ -546,3 +551,62 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
             self.assertNotIn(name, seen, ("%s field should not have been " +
                 "included twice") % name)
             seen[name] = True
+            
+    def test_delete_document_is_soft_delete(self):
+        self.login()
+        self.assert_create_document_by_post(external_authors="John Smith")
+        doc = Document.objects.order_by('-id')[0]
+        
+        url = reverse('admin:documents_document_readonly', args=[doc.id])
+        self.client.get(url)
+        delete_button = self.get_page_element('.//' + self.xhtml('input') +
+            '[@value="Delete"]')
+        self.assertEqual("location.assign('delete/'); return false;",
+            delete_button.attrib['onclick'])
+        
+        path,dot,file = url.rpartition("/")
+        url = path + "/delete/"
+        response = self.client.get(url)
+        title = self.get_page_element('./' + self.xhtml('head') +
+            '/' + self.xhtml('title'))
+        from django.conf import settings
+        self.assertEqual("%s | Are you sure?" % settings.APP_TITLE, title.text)
+
+        # import pdb; pdb.set_trace()
+        response = self.client.post(url, {"dummy": "whee"}, follow=True)
+        list_url = reverse('admin:documents_document_changelist')
+        list_url_full = response.real_request.build_absolute_uri(list_url)
+        self.assertSequenceEqual([(list_url_full, 302)], 
+            getattr(response, 'redirect_chain', []),
+            "successful document deletion should be followed by a redirect, "+
+            "not this: %s" % response.content)
+
+        # document should still exist
+        doc = Document.objects.get(pk=doc.id)
+        self.assertTrue(doc.deleted)
+
+    def test_search_results_hide_deleted_documents(self):
+        self.login()
+        
+        self.assert_create_document_by_post(title="Dunce",
+            external_authors="John Smith", deleted=True)
+        dunce = Document.objects.order_by('-id')[0]
+        self.assertTrue(dunce.deleted)
+        
+        self.assert_create_document_by_post(title="Nonce",
+            external_authors="John Smith")
+        nonce = Document.objects.order_by('-id')[0]
+        self.assertFalse(nonce.deleted)
+        
+        response = self.client.get(reverse('search'), {'q': 'Dunce'})
+        self.assertEqual(response.status_code, 200)
+        table, queryset = self.assert_search_results_table_get_queryset(response)
+        self.assertSequenceEqual([], list(queryset),
+            "Unexpected search results")
+
+        response = self.client.get(reverse('search'), {'q': 'Nonce'})
+        self.assertEqual(response.status_code, 200)
+        table, queryset = self.assert_search_results_table_get_queryset(response)
+        self.assertEqual(1, len(queryset),
+            "Missing or unexpected search results: %s" % queryset)
+        self.assertEqual(nonce.id, queryset[0].pk)

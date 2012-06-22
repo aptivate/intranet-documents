@@ -20,6 +20,7 @@ class DocumentIndex(indexes.RealTimeSearchIndex, indexes.Indexable):
     programs = MultiValueField()
     document_type = IntegerField(model_attr='document_type__id')
     created = DateField(model_attr='created')
+    deleted = BooleanField(model_attr='deleted')
     
     def get_model(self):
         return Document

@@ -69,13 +69,14 @@ class DocumentAdmin(AdminWithReadOnly):
     
     def delete_model(self, request, document):
         """
-        Override the default delete_model() to send notification emails.
+        Override the default delete_model() to send notification emails
+        and implement soft deletion.
         """
 
         self.send_notification_email(document, request, 
             'email/document_deleted.txt.django')
-        
-        return super(DocumentAdmin, self).delete_model(request, document)
+        document.deleted = True
+        document.save()
 
     """
     def delete_view(self, request, object_id, extra_context=None):
