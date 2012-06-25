@@ -584,6 +584,32 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         # document should still exist
         doc = Document.objects.get(pk=doc.id)
         self.assertTrue(doc.deleted)
+        
+        # and be listed only once in the search index, with deleted=True
+        from search.queries import SearchQuerySetWithAllFields
+        sqs = SearchQuerySetWithAllFields().models(Document)
+        
+        def assert_not_in_index(queryset):
+            self.assertSequenceEqual([], list(queryset),
+                "Document should not be listed with %s" % queryset.query)
+        assert_not_in_index(sqs.exclude(deleted=True))
+
+        def assert_in_index(queryset):
+            self.assertEqual(1, len(queryset),
+                "Document should be listed with %s" % queryset.query)
+            result = queryset[0]
+            self.assertEqual(doc.deleted, result.deleted,
+                "Document stored in search index should have deleted=%s" %
+                doc.deleted)
+        assert_in_index(sqs.filter(deleted=True))
+
+        # clearing the deleted flag should cause the document to only
+        # be listed once, with deleted=False
+        doc.deleted = False
+        doc.save()
+        
+        assert_not_in_index(sqs.filter(deleted=True))
+        assert_in_index(sqs.exclude(deleted=True))
 
     def test_search_results_hide_deleted_documents(self):
         self.login()
