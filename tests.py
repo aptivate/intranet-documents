@@ -208,6 +208,10 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
 
         from search.tables import SearchTable 
         self.assertIsInstance(table, SearchTable)
+
+        columns = table.base_columns.items()
+        self.assertNotIn('score', [c[0] for c in columns],
+            "Score column is disabled on request")
         
         data = table.data
         from django_tables2.tables import TableData
