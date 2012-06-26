@@ -42,10 +42,7 @@ class Document(models.Model):
     get_authors.short_description = 'Authors'
 
     def clean(self):
-        # print "Document.clean starting"
-        
         from django.core.exceptions import ValidationError
-        # raise ValidationError("early validation error")
         
         models.Model.clean(self)
         
@@ -58,8 +55,6 @@ class Document(models.Model):
         except ValidationError as e:
             # print "on_validate raised a ValidationError: %s" % e
             raise e
-
-        # print "Document.clean finished"
             
     @models.permalink
     def get_absolute_url(self):
