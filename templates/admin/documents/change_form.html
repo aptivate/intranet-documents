@@ -1,9 +1,5 @@
 {% extends "admin/change_form.html" %}
 
-{% comment %}
-http://djangosnippets.org/snippets/1636/
-{% endcomment %}
-
 {% block body_classes %}
 	{% if adminform.form.instance.confidential %}
 		document-confidential
