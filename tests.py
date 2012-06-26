@@ -310,8 +310,8 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
             "successful document deletion should be followed by a redirect, "+
             "not this: %s" % response.content)
         
-        self.assertSequenceEqual([], Document.objects.filter(id=doc.id),
-            "Document should have been deleted")
+        doc = Document.objects.get(id=doc.id)
+        self.assertTrue(doc.deleted, "Document should have been deleted")
 
     def test_uploader_can_delete_file(self):
         self.assert_create_document_by_post(title='whee')
