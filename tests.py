@@ -640,3 +640,17 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         self.assertEqual(1, len(queryset),
             "Missing or unexpected search results: %s" % queryset)
         self.assertEqual(nonce.id, queryset[0].pk)
+
+    def test_external_author_is_indexed(self):
+        self.assert_create_document_by_post(external_authors="Wonka")
+
+        doc = Document.objects.get()
+        self.assertEqual('Wonka', doc.external_authors)
+        
+        response = self.client.get(reverse('search'), {'q': 'Wonka'})
+        self.assertEqual(response.status_code, 200)
+        table, queryset = self.assert_search_results_table_get_queryset(response)
+        self.assertEqual(1, len(queryset),
+            "Missing or unexpected search results: %s" % queryset)
+        self.assertEqual(doc.id, queryset[0].pk)
+        self.assertEqual(doc.title, queryset[0].title)

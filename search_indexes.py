@@ -7,7 +7,8 @@ from django.core.files.uploadedfile import TemporaryUploadedFile, \
     InMemoryUploadedFile
 
 from haystack import indexes
-from haystack.fields import *
+from haystack.fields import (CharField, MultiValueField, DateField,
+    IntegerField, BooleanField)
 
 from models import Document
 
@@ -21,6 +22,7 @@ class DocumentIndex(indexes.RealTimeSearchIndex, indexes.Indexable):
     document_type = IntegerField(model_attr='document_type__id')
     created = DateField(model_attr='created')
     deleted = BooleanField(model_attr='deleted')
+    external_authors = CharField(model_attr='external_authors')
     
     def get_model(self):
         return Document
