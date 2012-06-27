@@ -272,12 +272,12 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         doc = Document.objects.get()
         self.assertEqual('boink', doc.title)
 
-    def test_document_upload_without_author_sets_author(self):
+    def test_document_upload_without_author_does_not_set_author(self):
         self.assert_create_document_by_post(authors=None)
 
         # did it save?
         doc = Document.objects.get()
-        self.assertItemsEqual([self.john], doc.authors.all())
+        self.assertItemsEqual([], doc.authors.all())
 
     def test_create_document_without_file_only_url_works(self):
         self.assert_create_document_by_post(file=None,
