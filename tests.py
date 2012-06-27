@@ -67,7 +67,6 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
             'programs': Program.objects.all()[0].id,
             'file': f,
             'notes': 'whee',
-            'authors': self.john.id,
         }
         values.update(kwargs)
 
@@ -112,7 +111,7 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         self.assertRegexpMatches(doc.file.name, 'boink(_\d+)?.png',
             "Wrong name on uploaded file")
         self.assertEqual('whee', doc.notes)
-        self.assertItemsEqual([self.john], doc.authors.all())
+        self.assertItemsEqual([], doc.authors.all())
     
     def test_word_2003_document_indexing(self):
         doc = Document()

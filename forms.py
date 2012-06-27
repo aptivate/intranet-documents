@@ -54,7 +54,4 @@ class DocumentForm(ModelForm):
             else:
                 cleaned_data['title'] = cleaned_data['file'].name
 
-        if (cleaned_data['authors'] in EMPTY_VALUES):
-            cleaned_data['authors'] = [self.request.user]
-                
         return cleaned_data
