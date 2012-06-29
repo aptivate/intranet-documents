@@ -198,30 +198,6 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
             "nec pretium odio fermentum. Sed in orci quis risus interdum " +
             "lacinia ut eu nisl.\n\n\n", self.index.prepare_text(doc))
 
-    def assert_search_results_table_get_queryset(self, response):
-        try:
-            table = response.context['results_table']
-        except KeyError as e:
-            self.fail("No table in response context: %s" %
-                response.context.keys())
-
-        from search.tables import SearchTable 
-        self.assertIsInstance(table, SearchTable)
-
-        columns = table.base_columns.items()
-        self.assertNotIn('score', [c[0] for c in columns],
-            "Score column is disabled on request")
-        
-        data = table.data
-        from django_tables2.tables import TableData
-        self.assertIsInstance(data, TableData)
-        
-        queryset = data.queryset
-        from haystack.query import SearchQuerySet
-        self.assertIsInstance(queryset, SearchQuerySet)
-        
-        return table, queryset
-
     def test_document_page_changelist(self):
         doc = Document(title='foo bar', document_type=DocumentType.objects.all()[0],
             notes="bonk")
