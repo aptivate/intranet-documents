@@ -438,6 +438,56 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         self.client.get(reverse('admin:documents_document_readonly',
             args=[doc.id]))
         self.assert_no_emails()
+
+    def test_view_permission_is_required_to_view_documents(self):
+        self.assert_create_document_by_post()
+        doc = Document.objects.order_by('-id')[0]
+        
+        from django.contrib.auth.models import User, Group
+        guest = Group.objects.get(name="Guest")
+        self.login(User.objects.get(groups=guest))
+        
+        groups = self.current_user.groups.all()
+        self.assertEqual(1, len(groups),
+            "this test requires that the current user is only in one group, " +
+            "not %s" % groups)
+        # to make it simpler to remove their view_document permission
+        
+        self.assertItemsEqual([], self.current_user.user_permissions.all(),
+            "this test requires that the current user has no user permissions")
+        # to make it simpler to remove their view_document permission
+        
+        user_group = groups[0]
+        from django.contrib.auth.models import Permission
+        view_document = Permission.objects.get(codename='view_document')
+        self.assertIn(view_document, user_group.permissions.all(),
+            ("this test requires that the user's group %s has the " +
+            "view_document permission") % user_group)
+        # to make it simpler to remove their view_document permission
+        
+        # change_document gives view_document permission, and we can't have that
+        change_document = Permission.objects.get(codename='change_document')
+        self.assertNotIn(change_document, user_group.permissions.all(),
+            ("this test requires that the user's group %s lacks the " +
+            "change_document permission") % user_group)
+        
+        response = self.client.get(reverse('admin:documents_document_readonly',
+            args=[doc.id]))
+        self.extract_admin_form(response) # check that there is one
+        
+        user_group.permissions.remove(view_document)
+        
+        from django.core.exceptions import PermissionDenied
+        with self.assertRaises(PermissionDenied):
+            response = self.client.get(reverse('admin:documents_document_readonly',
+                args=[doc.id]))
+            
+        # ensure that change_document permission works as well, for
+        # backwards compatibility
+        user_group.permissions.add(change_document)
+        response = self.client.get(reverse('admin:documents_document_readonly',
+            args=[doc.id]))
+        self.extract_admin_form(response) # check that there is one
         
     def test_document_view_does_not_send_email(self):
         self.assert_create_document_by_post()

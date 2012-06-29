@@ -16,6 +16,9 @@ class DocumentType(models.Model):
 class Document(models.Model):
     class Meta:
         ordering = ('title',)
+        permissions = (
+            ('view_document', "Can view documents using read-only form"),
+            )
     
     title = models.CharField(max_length=255, unique=True)
     document_type = models.ForeignKey(DocumentType)
