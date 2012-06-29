@@ -421,37 +421,38 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         
         from django.contrib.auth.models import User, Group
         guest = Group.objects.get(name="Guest")
-        self.login(User.objects.get(groups=guest))
+        guest_user = User.objects.filter(groups=guest)[0]
+        self.login(guest_user)
         
         groups = self.current_user.groups.all()
-        self.assertEqual(1, len(groups),
-            "this test requires that the current user is only in one group, " +
-            "not %s" % groups)
+        self.assertItemsEqual([guest], groups,
+            ("this test requires that %s is only in one group, " +
+            "not %s") % (self.current_user, groups))
         # to make it simpler to remove their view_document permission
         
         self.assertItemsEqual([], self.current_user.user_permissions.all(),
-            "this test requires that the current user has no user permissions")
+            "this test requires that %s has no user permissions" %
+            self.current_user)
         # to make it simpler to remove their view_document permission
         
-        user_group = groups[0]
         from django.contrib.auth.models import Permission
         view_document = Permission.objects.get(codename='view_document')
-        self.assertIn(view_document, user_group.permissions.all(),
-            ("this test requires that the user's group %s has the " +
-            "view_document permission") % user_group)
+        self.assertIn(view_document, guest.permissions.all(),
+            ("this test requires that the %s group has the " +
+            "view_document permission") % guest)
         # to make it simpler to remove their view_document permission
         
         # change_document gives view_document permission, and we can't have that
         change_document = Permission.objects.get(codename='change_document')
-        self.assertNotIn(change_document, user_group.permissions.all(),
-            ("this test requires that the user's group %s lacks the " +
-            "change_document permission") % user_group)
+        self.assertNotIn(change_document, guest.permissions.all(),
+            ("this test requires that the %s group lacks the " +
+            "change_document permission") % guest)
         
         response = self.client.get(reverse('admin:documents_document_readonly',
             args=[doc.id]))
         self.extract_admin_form(response) # check that there is one
         
-        user_group.permissions.remove(view_document)
+        guest.permissions.remove(view_document)
         
         from django.core.exceptions import PermissionDenied
         with self.assertRaises(PermissionDenied):
@@ -460,7 +461,7 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
             
         # ensure that change_document permission works as well, for
         # backwards compatibility
-        user_group.permissions.add(change_document)
+        guest.permissions.add(change_document)
         response = self.client.get(reverse('admin:documents_document_readonly',
             args=[doc.id]))
         self.extract_admin_form(response) # check that there is one
