@@ -259,6 +259,13 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         self.assert_create_document_by_post(file=None,
             hyperlink="http://foo.example.com/bar")
 
+    def test_create_document_without_file_requires_title(self):
+        response = self.create_document_by_post(file=None, title=None,
+            hyperlink="http://foo.example.com/bar")
+        self.assert_admin_form_with_errors_not_changelist(response,
+            expected_non_field_errors=['You must either attach a file ' +
+            'or provide a title'])
+
     def assert_delete_document(self, doc):
         response = self.client.get(reverse('admin:documents_document_delete',
             args=[doc.id]))

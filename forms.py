@@ -22,7 +22,14 @@ class DocumentForm(ModelForm):
         super(DocumentForm, self).__init__(data, files, auto_id, prefix, 
             initial, error_class, label_suffix, empty_permitted, instance)
         
+        # Title cannot be required in the form, because validation of
+        # form fields happens in Form._clean_fields() before we get a chance
+        # to set the title automatically from the uploaded file name.
+        # So we set it to not be required here, and validate in
+        # Document.clean() that we have a title by that time, before
+        # allowing the document to be saved.
         self.fields['title'].required = False
+        
         self.fields['document_type'].queryset.order_by('name')
         self.fields['programs'].help_text = self.MULTIPLE_SELECT_HELP
         self.fields['programs'].queryset.order_by('name')
@@ -42,7 +49,7 @@ class DocumentForm(ModelForm):
         user.
         """
         
-        cleaned_data = ModelForm.clean(self)
+        cleaned_data = super(DocumentForm, self).clean()
         
         if (cleaned_data['title'] in EMPTY_VALUES and
             cleaned_data.get('file', None) is not None):

@@ -53,6 +53,10 @@ class Document(models.Model):
             raise ValidationError('You must either attach a file ' +
                 'or provide a hyperlink')
         
+        if not self.title:
+            raise ValidationError('You must either attach a file ' +
+                'or provide a title')
+        
         try:
             self.on_validate.send(sender=Document, instance=self)
         except ValidationError as e:
