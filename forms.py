@@ -2,12 +2,17 @@ from django.core.validators import EMPTY_VALUES
 from django.forms import ModelForm
 from django.forms.util import ErrorList
 
+from binder.admin import TemplatedModelMultipleChoiceField
 from binder.widgets import AdminYesNoWidget, AdminFileWidgetWithSize
 
 from models import Document
 
 class DocumentForm(ModelForm):
     MULTIPLE_SELECT_HELP = u'Hold down Ctrl to select multiple options'
+    
+    authors = TemplatedModelMultipleChoiceField(
+        queryset=Document.authors.field.rel.to._default_manager.complex_filter(Document.authors.field.rel.limit_choices_to),
+        template='{{ obj.full_name }}')
     
     class Meta:
         model = Document
