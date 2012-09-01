@@ -18,6 +18,7 @@ class DocumentIndex(indexes.RealTimeSearchIndex, indexes.Indexable):
     notes = CharField(model_attr='notes')
     uploader = CharField(model_attr='uploader', null=True)
     authors = MultiValueField()
+    author_names = MultiValueField()
     programs = MultiValueField()
     document_type = IntegerField(model_attr='document_type__id')
     created = DateField(model_attr='created')
@@ -35,6 +36,12 @@ class DocumentIndex(indexes.RealTimeSearchIndex, indexes.Indexable):
     
     def prepare_authors(self, document):
         return [u.id for u in document.authors.all()]
+    
+    def prepare_author_names(self, document):
+        author_names = [u.full_name for u in document.authors.all()]
+        if document.external_authors is not None:
+            author_names.append(document.external_authors)
+        return author_names
         
     def prepare_programs(self, document):
         return [p.id for p in document.programs.all()]
