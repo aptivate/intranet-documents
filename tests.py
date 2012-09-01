@@ -237,7 +237,7 @@ class DocumentsModuleTest(AptivateEnhancedTestCase, DocumentTestMixin):
         row = [r for r in table.page.object_list if r.record.pk == doc.id][0]
         self.assertEqual("<a href='%s'>%s</a>" % (doc.get_absolute_url(),
             doc.title), row['title'])
-        self.assertEqual(doc.authors.all()[0].full_name, row['authors'])
+        self.assertEqual(doc.authors.all()[0].full_name, row['author_names'])
         self.assertEqual(doc.created, row['created'])
         self.assertEqual(doc.programs.all()[0].name, row['programs'])
         self.assertEqual(doc.document_type.name, row['document_type'])

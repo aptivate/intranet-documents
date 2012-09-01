@@ -39,7 +39,7 @@ class DocumentIndex(indexes.RealTimeSearchIndex, indexes.Indexable):
     
     def prepare_author_names(self, document):
         author_names = [u.full_name for u in document.authors.all()]
-        if document.external_authors is not None:
+        if document.external_authors is not None and document.external_authors != '':
             author_names.append(document.external_authors)
         return author_names
         
