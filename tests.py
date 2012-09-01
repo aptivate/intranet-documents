@@ -19,7 +19,37 @@ from binder.models import IntranetUser, Program
 from documents.admin import DocumentAdmin
 from documents.models import Document, DocumentType
 
-class DocumentsModuleTest(AptivateEnhancedTestCase):
+class DocumentTestMixin(object):
+    def create_document_by_post(self, **kwargs):
+        f = StringIO('foobar')
+        setattr(f, 'name', 'boink.png')
+
+        values = {
+            'title': 'foo',
+            'document_type': DocumentType.objects.all()[0].id,
+            'programs': Program.objects.all()[0].id,
+            'file': f,
+            'notes': 'whee',
+        }
+        values.update(kwargs)
+
+        # None cannot be sent over HTTP, so this means
+        # "delete the parameter" rather than "send a None value"
+        none_keys = [k for k, v in values.iteritems() if v is None]
+        for k in none_keys:
+            del values[k]
+        
+        response = self.client.post(reverse('admin:documents_document_add'),
+            values, follow=True)
+
+        return response
+
+    def assert_create_document_by_post(self, **kwargs):
+        response = self.create_document_by_post(**kwargs)
+        self.assert_changelist_not_admin_form_with_errors(response)
+        return response
+
+class DocumentsModuleTest(AptivateEnhancedTestCase, DocumentTestMixin):
     fixtures = ['test_programs', 'test_permissions', 'test_users',
         'test_documenttypes']
     
@@ -57,35 +87,6 @@ class DocumentsModuleTest(AptivateEnhancedTestCase):
         self.assertIn(Document, admin.site._registry)
         self.assertIsInstance(admin.site._registry[Document], DocumentAdmin)
         
-    def create_document_by_post(self, **kwargs):
-        f = StringIO('foobar')
-        setattr(f, 'name', 'boink.png')
-
-        values = {
-            'title': 'foo',
-            'document_type': DocumentType.objects.all()[0].id,
-            'programs': Program.objects.all()[0].id,
-            'file': f,
-            'notes': 'whee',
-        }
-        values.update(kwargs)
-
-        # None cannot be sent over HTTP, so this means
-        # "delete the parameter" rather than "send a None value"
-        none_keys = [k for k, v in values.iteritems() if v is None]
-        for k in none_keys:
-            del values[k]
-        
-        response = self.client.post(reverse('admin:documents_document_add'),
-            values, follow=True)
-
-        return response
-
-    def assert_create_document_by_post(self, **kwargs):
-        response = self.create_document_by_post(**kwargs)
-        self.assert_changelist_not_admin_form_with_errors(response)
-        return response
-
     def test_create_document_admin(self):
         response = self.client.get(reverse('admin:documents_document_add'))
         self.assertEqual(response.status_code, 200)
