@@ -22,14 +22,18 @@ class Document(models.Model):
     
     title = models.CharField(max_length=255, unique=True)
     document_type = models.ForeignKey(DocumentType)
-    programs = models.ManyToManyField(binder.models.Program)
     file = models.FileField(upload_to='documents', blank=True)
     notes = models.TextField(verbose_name="Description")
     authors = models.ManyToManyField(binder.configurable.UserModel,
         related_name="documents_authored")
     external_authors = models.CharField(max_length=255, blank=True)
     created = models.DateTimeField(auto_now_add=True)
-    hyperlink = models.URLField(blank=True, verify_exists=False)
+
+    try:
+        hyperlink = models.URLField(blank=True, verify_exists=False)
+    except TypeError: # https://github.com/andrewebdev/django-adzone/issues/12
+        hyperlink = models.URLField(blank=True)
+
     uploader = models.ForeignKey(binder.configurable.UserModel,
         related_name="documents_uploaded", null=True)
     confidential = models.BooleanField("CONFIDENTIAL DO NOT SHARE OUTSIDE ATA")
